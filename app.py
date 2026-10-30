@@ -22,7 +22,7 @@ from rotation_themes import THEMES
 from cloud_engine import bar_session_resample,scan_symbol
 
 st.set_page_config(page_title='Crescent Insights | Execution Desk V7',page_icon='🌙',
-                   layout='wide',initial_sidebar_state='collapsed')
+                   layout='wide',initial_sidebar_state='expanded')
 NOW=lambda:datetime.now(ET)
 
 
@@ -449,7 +449,11 @@ def render_live(snap):
         else:plan=None
     else:plan=plan_selector()
     if plan is None:
-        st.warning('No frozen overnight plan yet. Go to Night Plan and save up to two primary candidates plus one backup. Without a frozen plan, there is no legitimate live entry instruction.')
+        st.info('Start with a saved plan. Open Night Plan, review a candidate, and select Freeze plan. Then return here to check its trigger.')
+        if st.button('Open Night Plan',key='live_open_night',type='primary'):
+            st.session_state.next_workspace='Night Plan'
+            st.session_state.view='Night Plan'
+            st.rerun()
         return
     st.markdown(card(plan),unsafe_allow_html=True)
     if plan['id'] not in st.session_state.positions:
@@ -642,8 +646,11 @@ def main():
     st.caption('STANDALONE TEST APP • no changes to cresinstv.streamlit.app • paper planning only')
     if st.session_state.scan_errors:
         for w in st.session_state.scan_errors:st.warning(w)
-    choice=st.selectbox('Workspace',['Night Plan','Pre-open','Live Desk','Regime & Rotation','Research','Journal','Settings'],
-        index=['Night Plan','Pre-open','Live Desk','Regime & Rotation','Research','Journal','Settings'].index(st.session_state.view))
+    if 'workspace_choice' not in st.session_state:
+        st.session_state.workspace_choice=st.session_state.view
+    if st.session_state.get('next_workspace'):
+        st.session_state.workspace_choice=st.session_state.pop('next_workspace')
+    choice=st.selectbox('Workspace',['Night Plan','Pre-open','Live Desk','Regime & Rotation','Research','Journal','Settings'],key='workspace_choice')
     st.session_state.view=choice
     snap=st.session_state.market_snapshot
     if not snap:st.error('No market snapshot available. Select research mode in the sidebar and run it.');return

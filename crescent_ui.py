@@ -6,6 +6,28 @@ import streamlit as st
 LOGO_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22" stroke="#B8922A" stroke-width="1" opacity="0.6"/><path d="M24 8C16.268 8 10 14.268 10 22s6.268 14 14 14c1.96 0 3.82-.39 5.52-1.09C26.04 32.56 23 28.56 23 24s3.04-8.56 6.52-10.91A13.93 13.93 0 0 0 24 8z" fill="#B8922A"/></svg>'
 CSS='''<style>
 :root{--cx-bg:#0E1D30;--cx-panel:#162941;--cx-line:#2e455d;--cx-text:#eef3f6;--cx-muted:#a3b5c9;--cx-gold:#d3ab55;--cx-green:#58c4a2;--cx-red:#eb8790}
+:root{color-scheme:dark}
+[data-testid="stHeader"]{background:#0e1d30!important;color:#eef3f6!important}
+[data-testid="stToolbar"] button,[data-testid="stSidebarCollapseButton"] button,[data-testid="stExpandSidebarButton"] button{color:#eef3f6!important;background:#162941!important}
+[data-testid="stWidgetLabel"],[data-testid="stWidgetLabel"] *,
+[data-testid="stRadio"] label,[data-testid="stRadio"] label *,
+[data-testid="stCheckbox"] label,[data-testid="stCheckbox"] label *,
+[data-testid="stMarkdownContainer"]{color:#eef3f6!important}
+[data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] *{color:#bdcbdc!important}
+[data-testid="stAlert"]{background:#1b3049!important;border:1px solid #65819e!important;color:#f2f6fb!important}
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"],
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"] p{color:#f2f6fb!important}
+[data-testid="stAlert"] svg{fill:currentColor!important;color:#f0ca75!important}
+[data-baseweb="select"]>div,[data-baseweb="select"]>div>div{background:#1b3049!important;color:#f2f6fb!important}
+[data-baseweb="select"] svg{fill:#f2f6fb!important}
+[data-baseweb="popover"],[data-baseweb="menu"],[role="listbox"],[role="option"]{background:#1b3049!important;color:#f2f6fb!important}
+[role="option"]:hover,[role="option"][aria-selected="true"]{background:#344c65!important;color:#ffffff!important}
+[data-baseweb="input"],[data-baseweb="base-input"],[data-baseweb="textarea"]{background:#1b3049!important;color:#f2f6fb!important}
+input::placeholder,textarea::placeholder{color:#b8c9db!important;opacity:1!important}
+[data-testid="stFileUploaderDropzone"]{background:#162941!important;color:#eef3f6!important;border-color:#65819e!important}
+[data-testid="stExpander"] summary,[data-testid="stTabs"] button{color:#eef3f6!important}
+[data-testid="stTooltipIcon"] svg{fill:#bdcbdc!important}
+a{color:#f0ca75}a:hover{color:#ffe3a0}
 .stApp,[data-testid="stAppViewContainer"]{background:var(--cx-bg);color:var(--cx-text)}
 [data-testid="stSidebar"]{background:#101f34;border-right:1px solid var(--cx-line)}
 .block-container{padding-top:1.8rem!important;max-width:1370px}
