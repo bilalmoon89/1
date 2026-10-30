@@ -1,0 +1,575 @@
+Symbol,Company,Sector
+AAPL,Apple,Information Technology
+MSFT,Microsoft,Information Technology
+NVDA,NVIDIA,Information Technology
+AVGO,Broadcom,Information Technology
+ORCL,Oracle,Information Technology
+CRM,Salesforce,Information Technology
+AMD,AMD,Information Technology
+QCOM,Qualcomm,Information Technology
+MU,Micron,Information Technology
+AMAT,Applied Materials,Information Technology
+LRCX,Lam Research,Information Technology
+ADI,Analog Devices,Information Technology
+INTC,Intel,Information Technology
+TXN,Texas Instruments,Information Technology
+MRVL,Marvell Technology,Information Technology
+KLAC,KLA,Information Technology
+CSCO,Cisco,Information Technology
+IBM,IBM,Information Technology
+NOW,ServiceNow,Information Technology
+PANW,Palo Alto Networks,Information Technology
+CRWD,CrowdStrike,Information Technology
+PLTR,Palantir,Information Technology
+ANET,Arista Networks,Information Technology
+CDNS,Cadence Design Systems,Information Technology
+SNPS,Synopsys,Information Technology
+ADSK,Autodesk,Information Technology
+FTNT,Fortinet,Information Technology
+INTU,Intuit,Information Technology
+LITE,Lumentum,Information Technology
+COHR,Coherent,Information Technology
+META,Meta Platforms,Communication Services
+GOOGL,Alphabet,Communication Services
+GOOG,Alphabet,Communication Services
+NFLX,Netflix,Communication Services
+TMUS,T-Mobile,Communication Services
+VZ,Verizon,Communication Services
+T,AT&T,Communication Services
+DIS,Walt Disney,Communication Services
+CMCSA,Comcast,Communication Services
+CHTR,Charter Communications,Communication Services
+AMZN,Amazon,Consumer Discretionary
+TSLA,Tesla,Consumer Discretionary
+HD,Home Depot,Consumer Discretionary
+LOW,Lowe's,Consumer Discretionary
+MCD,McDonald's,Consumer Discretionary
+NKE,Nike,Consumer Discretionary
+TJX,TJX Companies,Consumer Discretionary
+BKNG,Booking Holdings,Consumer Discretionary
+ABNB,Airbnb,Consumer Discretionary
+ORLY,O'Reilly Automotive,Consumer Discretionary
+AZO,AutoZone,Consumer Discretionary
+GM,General Motors,Consumer Discretionary
+F,Ford,Consumer Discretionary
+ROST,Ross Stores,Consumer Discretionary
+DHI,D.R. Horton,Consumer Discretionary
+LEN,Lennar,Consumer Discretionary
+XOM,Exxon Mobil,Energy
+CVX,Chevron,Energy
+COP,ConocoPhillips,Energy
+EOG,EOG Resources,Energy
+SLB,SLB,Energy
+MPC,Marathon Petroleum,Energy
+PSX,Phillips 66,Energy
+VLO,Valero Energy,Energy
+OXY,Occidental Petroleum,Energy
+HAL,Halliburton,Energy
+DVN,Devon Energy,Energy
+FANG,Diamondback Energy,Energy
+EQT,EQT,Energy
+BKR,Baker Hughes,Energy
+JPM,JPMorgan Chase,Financials
+BAC,Bank of America,Financials
+WFC,Wells Fargo,Financials
+C,Citigroup,Financials
+GS,Goldman Sachs,Financials
+MS,Morgan Stanley,Financials
+BLK,BlackRock,Financials
+SCHW,Charles Schwab,Financials
+BX,Blackstone,Financials
+KKR,KKR,Financials
+COF,Capital One,Financials
+AXP,American Express,Financials
+USB,U.S. Bancorp,Financials
+PNC,PNC Financial,Financials
+CME,CME Group,Financials
+ICE,Intercontinental Exchange,Financials
+LLY,Eli Lilly,Health Care
+UNH,UnitedHealth,Health Care
+JNJ,Johnson & Johnson,Health Care
+ABBV,AbbVie,Health Care
+MRK,Merck,Health Care
+PFE,Pfizer,Health Care
+TMO,Thermo Fisher Scientific,Health Care
+ABT,Abbott Laboratories,Health Care
+DHR,Danaher,Health Care
+AMGN,Amgen,Health Care
+GILD,Gilead Sciences,Health Care
+ISRG,Intuitive Surgical,Health Care
+VRTX,Vertex Pharmaceuticals,Health Care
+REGN,Regeneron,Health Care
+CVS,CVS Health,Health Care
+WMT,Walmart,Consumer Staples
+COST,Costco,Consumer Staples
+PG,Procter & Gamble,Consumer Staples
+KO,Coca-Cola,Consumer Staples
+PEP,PepsiCo,Consumer Staples
+PM,Philip Morris,Consumer Staples
+MO,Altria,Consumer Staples
+CL,Colgate-Palmolive,Consumer Staples
+MDLZ,Mondelez,Consumer Staples
+KHC,Kraft Heinz,Consumer Staples
+KR,Kroger,Consumer Staples
+TGT,Target,Consumer Staples
+CAT,Caterpillar,Industrials
+GE,GE Aerospace,Industrials
+GEV,GE Vernova,Industrials
+RTX,RTX,Industrials
+HON,Honeywell,Industrials
+UNP,Union Pacific,Industrials
+UPS,UPS,Industrials
+DE,Deere,Industrials
+BA,Boeing,Industrials
+LMT,Lockheed Martin,Industrials
+GD,General Dynamics,Industrials
+ETN,Eaton,Industrials
+PH,Parker-Hannifin,Industrials
+EMR,Emerson Electric,Industrials
+CSX,CSX,Industrials
+NSC,Norfolk Southern,Industrials
+FDX,FedEx,Industrials
+NEE,NextEra Energy,Utilities
+DUK,Duke Energy,Utilities
+SO,Southern Company,Utilities
+D,Dominion Energy,Utilities
+AEP,American Electric Power,Utilities
+EXC,Exelon,Utilities
+SRE,Sempra,Utilities
+CEG,Constellation Energy,Utilities
+VST,Vistra,Utilities
+XEL,Xcel Energy,Utilities
+PLD,Prologis,Real Estate
+AMT,American Tower,Real Estate
+EQIX,Equinix,Real Estate
+CCI,Crown Castle,Real Estate
+SPG,Simon Property Group,Real Estate
+O,Realty Income,Real Estate
+WELL,Welltower,Real Estate
+DLR,Digital Realty,Real Estate
+LIN,Linde,Materials
+SHW,Sherwin-Williams,Materials
+APD,Air Products,Materials
+ECL,Ecolab,Materials
+NEM,Newmont,Materials
+FCX,Freeport-McMoRan,Materials
+NUE,Nucor,Materials
+DOW,Dow,Materials
+DD,DuPont,Materials
+VMC,Vulcan Materials,Materials
+MLM,Martin Marietta Materials,Materials
+MMM,MMM,US Large/Mid Cap
+AOS,AOS,US Large/Mid Cap
+ACN,ACN,US Large/Mid Cap
+ADBE,ADBE,US Large/Mid Cap
+AES,AES,US Large/Mid Cap
+AFL,AFL,US Large/Mid Cap
+A,A,US Large/Mid Cap
+AKAM,AKAM,US Large/Mid Cap
+ALB,ALB,US Large/Mid Cap
+ARE,ARE,US Large/Mid Cap
+ALGN,ALGN,US Large/Mid Cap
+ALLE,ALLE,US Large/Mid Cap
+LNT,LNT,US Large/Mid Cap
+ALL,ALL,US Large/Mid Cap
+AMCR,AMCR,US Large/Mid Cap
+AEE,AEE,US Large/Mid Cap
+AIG,AIG,US Large/Mid Cap
+AWK,AWK,US Large/Mid Cap
+AMP,AMP,US Large/Mid Cap
+AME,AME,US Large/Mid Cap
+APH,APH,US Large/Mid Cap
+AON,AON,US Large/Mid Cap
+APA,APA,US Large/Mid Cap
+APO,APO,US Large/Mid Cap
+APP,APP,US Large/Mid Cap
+APTV,APTV,US Large/Mid Cap
+ACGL,ACGL,US Large/Mid Cap
+ADM,ADM,US Large/Mid Cap
+ARES,ARES,US Large/Mid Cap
+AJG,AJG,US Large/Mid Cap
+AIZ,AIZ,US Large/Mid Cap
+ATO,ATO,US Large/Mid Cap
+ADP,ADP,US Large/Mid Cap
+AVY,AVY,US Large/Mid Cap
+AXON,AXON,US Large/Mid Cap
+BALL,BALL,US Large/Mid Cap
+BAX,BAX,US Large/Mid Cap
+BDX,BDX,US Large/Mid Cap
+BRK.B,BRK.B,US Large/Mid Cap
+BBY,BBY,US Large/Mid Cap
+TECH,TECH,US Large/Mid Cap
+BIIB,BIIB,US Large/Mid Cap
+XYZ,XYZ,US Large/Mid Cap
+BNY,BNY,US Large/Mid Cap
+BSX,BSX,US Large/Mid Cap
+BMY,BMY,US Large/Mid Cap
+BR,BR,US Large/Mid Cap
+BRO,BRO,US Large/Mid Cap
+BF.B,BF.B,US Large/Mid Cap
+BLDR,BLDR,US Large/Mid Cap
+BG,BG,US Large/Mid Cap
+BXP,BXP,US Large/Mid Cap
+CHRW,CHRW,US Large/Mid Cap
+CPT,CPT,US Large/Mid Cap
+CAH,CAH,US Large/Mid Cap
+CCL,CCL,US Large/Mid Cap
+CARR,CARR,US Large/Mid Cap
+CVNA,CVNA,US Large/Mid Cap
+CASY,CASY,US Large/Mid Cap
+CBOE,CBOE,US Large/Mid Cap
+CBRE,CBRE,US Large/Mid Cap
+CDW,CDW,US Large/Mid Cap
+COR,COR,US Large/Mid Cap
+CNC,CNC,US Large/Mid Cap
+CNP,CNP,US Large/Mid Cap
+CF,CF,US Large/Mid Cap
+CRL,CRL,US Large/Mid Cap
+CMG,CMG,US Large/Mid Cap
+CB,CB,US Large/Mid Cap
+CHD,CHD,US Large/Mid Cap
+CIEN,CIEN,US Large/Mid Cap
+CI,CI,US Large/Mid Cap
+CINF,CINF,US Large/Mid Cap
+CTAS,CTAS,US Large/Mid Cap
+CFG,CFG,US Large/Mid Cap
+CLX,CLX,US Large/Mid Cap
+CMS,CMS,US Large/Mid Cap
+CTSH,CTSH,US Large/Mid Cap
+COIN,COIN,US Large/Mid Cap
+FIX,FIX,US Large/Mid Cap
+ED,ED,US Large/Mid Cap
+STZ,STZ,US Large/Mid Cap
+COO,COO,US Large/Mid Cap
+CPRT,CPRT,US Large/Mid Cap
+GLW,GLW,US Large/Mid Cap
+CPAY,CPAY,US Large/Mid Cap
+CTVA,CTVA,US Large/Mid Cap
+CSGP,CSGP,US Large/Mid Cap
+CRH,CRH,US Large/Mid Cap
+CMI,CMI,US Large/Mid Cap
+DRI,DRI,US Large/Mid Cap
+DDOG,DDOG,US Large/Mid Cap
+DVA,DVA,US Large/Mid Cap
+DECK,DECK,US Large/Mid Cap
+DELL,DELL,US Large/Mid Cap
+DAL,DAL,US Large/Mid Cap
+DXCM,DXCM,US Large/Mid Cap
+DG,DG,US Large/Mid Cap
+DLTR,DLTR,US Large/Mid Cap
+DPZ,DPZ,US Large/Mid Cap
+DASH,DASH,US Large/Mid Cap
+DOV,DOV,US Large/Mid Cap
+DTE,DTE,US Large/Mid Cap
+EBAY,EBAY,US Large/Mid Cap
+ECHO,ECHO,US Large/Mid Cap
+EIX,EIX,US Large/Mid Cap
+EW,EW,US Large/Mid Cap
+ELV,ELV,US Large/Mid Cap
+EME,EME,US Large/Mid Cap
+ETR,ETR,US Large/Mid Cap
+EFX,EFX,US Large/Mid Cap
+ERIE,ERIE,US Large/Mid Cap
+ESS,ESS,US Large/Mid Cap
+EL,EL,US Large/Mid Cap
+EG,EG,US Large/Mid Cap
+EVRG,EVRG,US Large/Mid Cap
+ES,ES,US Large/Mid Cap
+EXE,EXE,US Large/Mid Cap
+EXPE,EXPE,US Large/Mid Cap
+EXPD,EXPD,US Large/Mid Cap
+EXR,EXR,US Large/Mid Cap
+FFIV,FFIV,US Large/Mid Cap
+FDS,FDS,US Large/Mid Cap
+FICO,FICO,US Large/Mid Cap
+FAST,FAST,US Large/Mid Cap
+FRT,FRT,US Large/Mid Cap
+FDXF,FDXF,US Large/Mid Cap
+FERG,FERG,US Large/Mid Cap
+FIS,FIS,US Large/Mid Cap
+FITB,FITB,US Large/Mid Cap
+FSLR,FSLR,US Large/Mid Cap
+FE,FE,US Large/Mid Cap
+FISV,FISV,US Large/Mid Cap
+FLEX,FLEX,US Large/Mid Cap
+FTV,FTV,US Large/Mid Cap
+FOXA,FOXA,US Large/Mid Cap
+FOX,FOX,US Large/Mid Cap
+BEN,BEN,US Large/Mid Cap
+GRMN,GRMN,US Large/Mid Cap
+IT,IT,US Large/Mid Cap
+GEHC,GEHC,US Large/Mid Cap
+GEN,GEN,US Large/Mid Cap
+GNRC,GNRC,US Large/Mid Cap
+GIS,GIS,US Large/Mid Cap
+GPC,GPC,US Large/Mid Cap
+GPN,GPN,US Large/Mid Cap
+GL,GL,US Large/Mid Cap
+GDDY,GDDY,US Large/Mid Cap
+HIG,HIG,US Large/Mid Cap
+HAS,HAS,US Large/Mid Cap
+HCA,HCA,US Large/Mid Cap
+DOC,DOC,US Large/Mid Cap
+HSIC,HSIC,US Large/Mid Cap
+HSY,HSY,US Large/Mid Cap
+HPE,HPE,US Large/Mid Cap
+HLT,HLT,US Large/Mid Cap
+HONA,HONA,US Large/Mid Cap
+HRL,HRL,US Large/Mid Cap
+HST,HST,US Large/Mid Cap
+HWM,HWM,US Large/Mid Cap
+HPQ,HPQ,US Large/Mid Cap
+HUBB,HUBB,US Large/Mid Cap
+HUM,HUM,US Large/Mid Cap
+HBAN,HBAN,US Large/Mid Cap
+HII,HII,US Large/Mid Cap
+IEX,IEX,US Large/Mid Cap
+IDXX,IDXX,US Large/Mid Cap
+ITW,ITW,US Large/Mid Cap
+INCY,INCY,US Large/Mid Cap
+IR,IR,US Large/Mid Cap
+INVH,INVH,US Large/Mid Cap
+IPG,IPG,US Large/Mid Cap
+IQV,IQV,US Large/Mid Cap
+IRM,IRM,US Large/Mid Cap
+JBHT,JBHT,US Large/Mid Cap
+JCI,JCI,US Large/Mid Cap
+JKHY,JKHY,US Large/Mid Cap
+JNPR,JNPR,US Large/Mid Cap
+KDP,KDP,US Large/Mid Cap
+KEY,KEY,US Large/Mid Cap
+KEYS,KEYS,US Large/Mid Cap
+KIM,KIM,US Large/Mid Cap
+KMB,KMB,US Large/Mid Cap
+KMI,KMI,US Large/Mid Cap
+KMX,KMX,US Large/Mid Cap
+LHX,LHX,US Large/Mid Cap
+LH,LH,US Large/Mid Cap
+LII,LII,US Large/Mid Cap
+LKQ,LKQ,US Large/Mid Cap
+LULU,LULU,US Large/Mid Cap
+LYB,LYB,US Large/Mid Cap
+MTB,MTB,US Large/Mid Cap
+MAR,MAR,US Large/Mid Cap
+MRSH,MRSH,US Large/Mid Cap
+MAS,MAS,US Large/Mid Cap
+MA,MA,US Large/Mid Cap
+MKC,MKC,US Large/Mid Cap
+MCK,MCK,US Large/Mid Cap
+MDT,MDT,US Large/Mid Cap
+MET,MET,US Large/Mid Cap
+MTD,MTD,US Large/Mid Cap
+MGM,MGM,US Large/Mid Cap
+MCHP,MCHP,US Large/Mid Cap
+MAA,MAA,US Large/Mid Cap
+MRNA,MRNA,US Large/Mid Cap
+TAP,TAP,US Large/Mid Cap
+MPWR,MPWR,US Large/Mid Cap
+MNST,MNST,US Large/Mid Cap
+MCO,MCO,US Large/Mid Cap
+MOS,MOS,US Large/Mid Cap
+MSI,MSI,US Large/Mid Cap
+MSCI,MSCI,US Large/Mid Cap
+NDAQ,NDAQ,US Large/Mid Cap
+NTAP,NTAP,US Large/Mid Cap
+NWSA,NWSA,US Large/Mid Cap
+NWS,NWS,US Large/Mid Cap
+NI,NI,US Large/Mid Cap
+NDSN,NDSN,US Large/Mid Cap
+NTRS,NTRS,US Large/Mid Cap
+NOC,NOC,US Large/Mid Cap
+NCLH,NCLH,US Large/Mid Cap
+NRG,NRG,US Large/Mid Cap
+NVR,NVR,US Large/Mid Cap
+NXPI,NXPI,US Large/Mid Cap
+ODFL,ODFL,US Large/Mid Cap
+OMC,OMC,US Large/Mid Cap
+ON,ON,US Large/Mid Cap
+OKE,OKE,US Large/Mid Cap
+OTIS,OTIS,US Large/Mid Cap
+PCAR,PCAR,US Large/Mid Cap
+PKG,PKG,US Large/Mid Cap
+PSKY,PSKY,US Large/Mid Cap
+PAYX,PAYX,US Large/Mid Cap
+PYPL,PYPL,US Large/Mid Cap
+PNR,PNR,US Large/Mid Cap
+PCG,PCG,US Large/Mid Cap
+PNW,PNW,US Large/Mid Cap
+PPG,PPG,US Large/Mid Cap
+PPL,PPL,US Large/Mid Cap
+PFG,PFG,US Large/Mid Cap
+PGR,PGR,US Large/Mid Cap
+PRU,PRU,US Large/Mid Cap
+PEG,PEG,US Large/Mid Cap
+PTC,PTC,US Large/Mid Cap
+PSA,PSA,US Large/Mid Cap
+PHM,PHM,US Large/Mid Cap
+PWR,PWR,US Large/Mid Cap
+DGX,DGX,US Large/Mid Cap
+Q,Q,US Large/Mid Cap
+RL,RL,US Large/Mid Cap
+RJF,RJF,US Large/Mid Cap
+RDDT,RDDT,US Large/Mid Cap
+REG,REG,US Large/Mid Cap
+RF,RF,US Large/Mid Cap
+RSG,RSG,US Large/Mid Cap
+RMD,RMD,US Large/Mid Cap
+RVTY,RVTY,US Large/Mid Cap
+HOOD,HOOD,US Large/Mid Cap
+ROK,ROK,US Large/Mid Cap
+ROL,ROL,US Large/Mid Cap
+ROP,ROP,US Large/Mid Cap
+RCL,RCL,US Large/Mid Cap
+SPGI,SPGI,US Large/Mid Cap
+SNDK,SNDK,US Large/Mid Cap
+SBAC,SBAC,US Large/Mid Cap
+STX,STX,US Large/Mid Cap
+SWKS,SWKS,US Large/Mid Cap
+SJM,SJM,US Large/Mid Cap
+SW,SW,US Large/Mid Cap
+SNA,SNA,US Large/Mid Cap
+SOLV,SOLV,US Large/Mid Cap
+LUV,LUV,US Large/Mid Cap
+SWK,SWK,US Large/Mid Cap
+SBUX,SBUX,US Large/Mid Cap
+STT,STT,US Large/Mid Cap
+STLD,STLD,US Large/Mid Cap
+STE,STE,US Large/Mid Cap
+SYK,SYK,US Large/Mid Cap
+SMCI,SMCI,US Large/Mid Cap
+SYF,SYF,US Large/Mid Cap
+SYY,SYY,US Large/Mid Cap
+TROW,TROW,US Large/Mid Cap
+TTWO,TTWO,US Large/Mid Cap
+TPR,TPR,US Large/Mid Cap
+TRGP,TRGP,US Large/Mid Cap
+TEL,TEL,US Large/Mid Cap
+TDY,TDY,US Large/Mid Cap
+TER,TER,US Large/Mid Cap
+TPL,TPL,US Large/Mid Cap
+TXT,TXT,US Large/Mid Cap
+TKO,TKO,US Large/Mid Cap
+TTD,TTD,US Large/Mid Cap
+TSCO,TSCO,US Large/Mid Cap
+TT,TT,US Large/Mid Cap
+TDG,TDG,US Large/Mid Cap
+TRV,TRV,US Large/Mid Cap
+TRMB,TRMB,US Large/Mid Cap
+TFC,TFC,US Large/Mid Cap
+TYL,TYL,US Large/Mid Cap
+TSN,TSN,US Large/Mid Cap
+UBER,UBER,US Large/Mid Cap
+UDR,UDR,US Large/Mid Cap
+ULTA,ULTA,US Large/Mid Cap
+UAL,UAL,US Large/Mid Cap
+URI,URI,US Large/Mid Cap
+UHS,UHS,US Large/Mid Cap
+VEEV,VEEV,US Large/Mid Cap
+VTR,VTR,US Large/Mid Cap
+VLTO,VLTO,US Large/Mid Cap
+VRSN,VRSN,US Large/Mid Cap
+VRSK,VRSK,US Large/Mid Cap
+VRT,VRT,US Large/Mid Cap
+VTRS,VTRS,US Large/Mid Cap
+VICI,VICI,US Large/Mid Cap
+V,V,US Large/Mid Cap
+VMRK,VMRK,US Large/Mid Cap
+WRB,WRB,US Large/Mid Cap
+GWW,GWW,US Large/Mid Cap
+WAB,WAB,US Large/Mid Cap
+WBD,WBD,US Large/Mid Cap
+WM,WM,US Large/Mid Cap
+WAT,WAT,US Large/Mid Cap
+WEC,WEC,US Large/Mid Cap
+WST,WST,US Large/Mid Cap
+WDC,WDC,US Large/Mid Cap
+WY,WY,US Large/Mid Cap
+WSM,WSM,US Large/Mid Cap
+WMB,WMB,US Large/Mid Cap
+WTW,WTW,US Large/Mid Cap
+WDAY,WDAY,US Large/Mid Cap
+WYNN,WYNN,US Large/Mid Cap
+XYL,XYL,US Large/Mid Cap
+YUM,YUM,US Large/Mid Cap
+ZBRA,ZBRA,US Large/Mid Cap
+ZBH,ZBH,US Large/Mid Cap
+ZTS,ZTS,US Large/Mid Cap
+TWLO,TWLO,US Large/Mid Cap
+ILMN,ILMN,US Large/Mid Cap
+FTI,FTI,US Large/Mid Cap
+P,P,US Large/Mid Cap
+OKTA,OKTA,US Large/Mid Cap
+ATI,ATI,US Large/Mid Cap
+NVT,NVT,US Large/Mid Cap
+CRS,CRS,US Large/Mid Cap
+USFD,USFD,US Large/Mid Cap
+THC,THC,US Large/Mid Cap
+CDE,CDE,US Large/Mid Cap
+XPO,XPO,US Large/Mid Cap
+RGLD,RGLD,US Large/Mid Cap
+CW,CW,US Large/Mid Cap
+UTHR,UTHR,US Large/Mid Cap
+ROKU,ROKU,US Large/Mid Cap
+WWD,WWD,US Large/Mid Cap
+RS,RS,US Large/Mid Cap
+ENTG,ENTG,US Large/Mid Cap
+SNX,SNX,US Large/Mid Cap
+PR,PR,US Large/Mid Cap
+ITT,ITT,US Large/Mid Cap
+OVV,OVV,US Large/Mid Cap
+NTNX,NTNX,US Large/Mid Cap
+EWBC,EWBC,US Large/Mid Cap
+GWRE,GWRE,US Large/Mid Cap
+MTSI,MTSI,US Large/Mid Cap
+MKSI,MKSI,US Large/Mid Cap
+JLL,JLL,US Large/Mid Cap
+RGA,RGA,US Large/Mid Cap
+NLY,NLY,US Large/Mid Cap
+WCC,WCC,US Large/Mid Cap
+TRU,TRU,US Large/Mid Cap
+DINO,DINO,US Large/Mid Cap
+BURL,BURL,US Large/Mid Cap
+SGI,SGI,US Large/Mid Cap
+TOST,TOST,US Large/Mid Cap
+NBIX,NBIX,US Large/Mid Cap
+CLH,CLH,US Large/Mid Cap
+WPC,WPC,US Large/Mid Cap
+PFGC,PFGC,US Large/Mid Cap
+LSCC,LSCC,US Large/Mid Cap
+DT,DT,US Large/Mid Cap
+JAZZ,JAZZ,US Large/Mid Cap
+ROIV,ROIV,US Large/Mid Cap
+RBA,RBA,US Large/Mid Cap
+RBC,RBC,US Large/Mid Cap
+APG,APG,US Large/Mid Cap
+PNFP,PNFP,US Large/Mid Cap
+ARMK,ARMK,US Large/Mid Cap
+LECO,LECO,US Large/Mid Cap
+EXEL,EXEL,US Large/Mid Cap
+BWXT,BWXT,US Large/Mid Cap
+RNR,RNR,US Large/Mid Cap
+EQH,EQH,US Large/Mid Cap
+MTZ,MTZ,US Large/Mid Cap
+HL,HL,US Large/Mid Cap
+UNM,UNM,US Large/Mid Cap
+FN,FN,US Large/Mid Cap
+STRL,STRL,US Large/Mid Cap
+OHI,OHI,US Large/Mid Cap
+MLI,MLI,US Large/Mid Cap
+CSL,CSL,US Large/Mid Cap
+CACI,CACI,US Large/Mid Cap
+SUI,SUI,US Large/Mid Cap
+TLN,TLN,US Large/Mid Cap
+BWA,BWA,US Large/Mid Cap
+AA,AA,US Large/Mid Cap
+TOL,TOL,US Large/Mid Cap
+MEDP,MEDP,US Large/Mid Cap
+FIVE,FIVE,US Large/Mid Cap
+RPM,RPM,US Large/Mid Cap
+LAMR,LAMR,US Large/Mid Cap
+MANH,MANH,US Large/Mid Cap
+HALO,HALO,US Large/Mid Cap
+DTM,DTM,US Large/Mid Cap
+GGG,GGG,US Large/Mid Cap
+BMRN,BMRN,US Large/Mid Cap
+DOCU,DOCU,US Large/Mid Cap

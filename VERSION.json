@@ -1,0 +1,13 @@
+{
+  "app": "Crescent Insights Decision & Execution Desk",
+  "version": "7.0.0-beta",
+  "build_date": "2026-10-30",
+  "deployment": "standalone-new-streamlit-app",
+  "writes_to_existing_scanner": false,
+  "offline_tests_passed": 24,
+  "live_streamlit_runtime_tested": false,
+  "market_data_tested_on_new_deployment": false,
+  "position_sizing": false,
+  "broker_orders": false,
+  "demo_mode_is_synthetic": true
+}

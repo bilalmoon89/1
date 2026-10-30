@@ -1,0 +1,40 @@
+CRESCENT V7 — VERIFICATION SUMMARY
+Date: 2026-10-30
+
+PASS — 24 offline pytest checks:
+• original 574-stock / 96-ETF universes and 90 research baskets available
+• defensive rotation from simulated historical ETF data
+• missing SPY prohibits fabricated regime confidence
+• unfinished daily candle withheld until the daily session is complete
+• completed-bar overnight plans cannot be READY
+• two defensives (LLY and PG) produce distinct test-only ARMED setups
+• full 10-minute RTH candle alignment; incomplete bars excluded
+• no entry before the configured opening wait and no night trading
+• accurate VWAP reset per trading session
+• no chasing when current price exceeds max planned entry
+• provider staleness and outdated overnight plans fail closed
+• optional fresh sector confirmation can block a conflicting setup
+• event blocks require verified, user-provided, high-importance event
+• unconfirmed rumors are not treated as verified events
+• option sizing/win-rate probabilities are absent from the execution screen
+
+PASS — Python syntax compilation of all included .py files.
+PASS — seven screens traversed via a mocked Streamlit rendering stub,
+       including frozen-plan pre-open, live-desk and journal paths.
+PASS — companion HTML design preview verified in Chromium at 1366px desktop
+       and 412px mobile. Mobile document width=412px (no horizontal overflow).
+PASS — HTML preview navigation to Night Plan, Live Desk and Rotation.
+
+NOT VERIFIED — full Streamlit browser runtime: Streamlit package was not
+installed in the isolated build container and network package installation
+failed. This is NOT a completed production deployment test.
+NOT VERIFIED — Yahoo and the optional public TradingView Screener on the
+new Streamlit hosting environment; that environment may have network/rate limits.
+NOT VERIFIED — intraday price parity against TradingView broker chart,
+real-time feed latency, holiday session boundaries, and after-cost expectancy.
+NOT VERIFIED — comprehensive, current economic/earnings/political/war calendar;
+news is unverified RSS and events CSV is supplied by the user.
+
+Beta acceptance should require live-market smoke testing plus user signoff
+before relying on the new execution-screen logic. Original production app is
+not changed by this file package.
