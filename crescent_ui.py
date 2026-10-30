@@ -29,8 +29,17 @@ h2{font-size:1.3rem!important}h3{font-size:1.08rem!important}
 [data-testid="stMetricLabel"],[data-testid="stMetricLabel"] *{color:#b9c7d7!important}
 [data-testid="stMetricValue"],[data-testid="stMetricValue"] *{color:#f0e9dc!important}
 [data-testid="stDataFrame"]{border:1px solid #304961;border-radius:10px;overflow:hidden}
-button[kind="primary"]{background:#d3ab55!important;color:#0d2032!important;border:0!important;font-weight:700!important}
-button[kind="primary"] p{color:#0d2032!important}
+/* Keep every action readable at rest, including secondary and download buttons. */
+:is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a),
+button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]){background:#d3ab55!important;color:#0d2032!important;border:1px solid #e3bf73!important;font-weight:700!important;opacity:1!important}
+:is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a) *,
+button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]) *{color:inherit!important}
+:is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a):hover,
+button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]):hover{background:#e7c477!important;color:#0d2032!important;border-color:#f0d89c!important}
+:is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a):focus-visible,
+button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]):focus-visible{outline:3px solid #f4deb0!important;outline-offset:3px!important}
+:is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a):disabled,
+button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]):disabled{background:#776844!important;color:#ffffff!important;border-color:#ad9563!important;opacity:1!important;cursor:not-allowed!important}
 [data-baseweb="select"]>div,input,textarea{background:#1b3049!important;color:#f2f6fb!important}
 [data-testid="stTabs"] [aria-selected="true"]{color:#d3ab55!important}
 [data-testid="stExpander"]{border-color:#304961!important}
