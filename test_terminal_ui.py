@@ -19,13 +19,15 @@ def test_terminal_feed_failure_has_no_generated_fallback(monkeypatch):
     assert 'generate_demo' not in Path('app.py').read_text(encoding='utf-8')
 
 
-def test_terminal_saves_candidate_and_opens_monitor(monkeypatch):
+def test_terminal_saves_candidate_and_opens_monitor(monkeypatch,tmp_path):
     st.cache_data.clear()
     frames,_=crescent_feeds.generate_demo()  # Deterministic offline test fixture only.
     monkeypatch.setattr(crescent_feeds,'yahoo_daily',lambda *a,**k:(frames,{}))
     source=Path('app.py').read_text(encoding='utf-8').replace('NOW=lambda:datetime.now(ET)',
         'NOW=lambda:datetime(2026,10,30,17,0,tzinfo=ET)')
-    app=AppTest.from_string(source,default_timeout=60).run()
+    test_app=tmp_path/'app.py'
+    test_app.write_text(source,encoding='utf-8')
+    app=AppTest.from_file(str(test_app),default_timeout=60).run()
     assert not app.exception
     choices=[x for x in app.button if x.label=='＋ Watch setup' and not x.disabled]
     assert choices
