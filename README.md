@@ -18,7 +18,9 @@ Use Python 3.12 or newer, install `requirements.txt`, then run:
 python -m streamlit run app.py
 ```
 
-The default is clearly labelled simulation. Select Yahoo Finance in the sidebar and run research to request market history. Yahoo is best effort and delayed; monitoring checks run on request, with no background scan or automatic orders.
+The terminal automatically requests real Yahoo Finance market history on first load. There is no demo mode or generated-price fallback. Use Scan now to refresh or change the balanced universe. Yahoo is best effort and delayed; failed instruments are excluded and listed under Data connection / coverage. Intraday monitoring checks run on request, with no automatic orders.
+
+The interface follows the supplied TapeReader reference: a compact masthead, market strip with real-history sparklines, four context panels, scan controls, three ranked setup cards and The Watchtower. Every table uses the terminal's dark palette. The Streamlit version is pinned so deployments do not silently change frontend versions.
 
 ## Behavior preserved
 
