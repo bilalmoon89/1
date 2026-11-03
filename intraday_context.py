@@ -94,5 +94,7 @@ def tradingview_quotes(symbols):
             except ValueError:pass
         return text
     frame['Feed mode']=frame['Feed mode'].map(feed_label)
-    frame['Retrieved ET']=datetime.now(ET).isoformat(timespec='seconds')
+    for column in ['Last','Today %','From open %','VWAP']:
+        frame[column]=pd.to_numeric(frame[column],errors='coerce').round(2)
+    frame['Retrieved ET']=datetime.now(ET).strftime('%Y-%m-%d %H:%M:%S ET')
     return frame[['Symbol','Exchange','Last','Today %','From open %','VWAP','Feed mode','Retrieved ET']]
