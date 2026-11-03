@@ -69,10 +69,10 @@ button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]):di
 </style>'''
 
 
-def brand(label='Decision & Execution Desk'):
+def brand(label='Market intelligence · Active setup monitoring'):
     st.markdown(CSS,unsafe_allow_html=True)
     logo='data:image/svg+xml;base64,'+base64.b64encode(LOGO_SVG.encode()).decode()
-    st.markdown(f'<div class="cx-header"><img alt="Crescent Insights mark" src="{logo}"><div><div class="cx-word">Crescent Insights</div><div class="cx-sub">{label}</div></div></div>',unsafe_allow_html=True)
+    st.markdown(f'<div class="cx-header"><img alt="Crescent mark" src="{logo}"><div><div class="cx-word">Crescent Trade Terminal — BETA</div><div class="cx-sub">{label}</div></div></div>',unsafe_allow_html=True)
 
 
 def status_html(name):

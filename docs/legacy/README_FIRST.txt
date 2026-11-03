@@ -1,4 +1,4 @@
-CRESCENT INSIGHTS — V7 STANDALONE DECISION & EXECUTION DESK
+Crescent Trade Terminal — BETA
 =========================================================
 Version: 7.0 beta | 30 October 2026
 
@@ -32,7 +32,7 @@ WHAT THE NEW APP DOES
 - Night Plan: sector-neutral completed-daily screening, regime context, at most
   three precommitted plans, explicit triggers, invalidation, next obstacle/R:R.
 - Pre-open: optional extended-hours quote revalidation, no READY state.
-- Live Desk: checks only frozen plans from completed 10m RTH bars + VWAP,
+- The Watchtower (internal workspace: Live Desk): checks only frozen plans from completed 10m RTH bars + VWAP,
   stale-data, opening restriction, no chase, structural stop and event gates.
 - Regime & Rotation: eleven sector ETFs, index context, 5D/21D SPY-relative
   leadership, defensive leadership changes, cross-assets, and read-only

@@ -21,7 +21,7 @@ from crescent_charts import candles
 from rotation_themes import THEMES
 from cloud_engine import bar_session_resample,scan_symbol
 
-st.set_page_config(page_title='Crescent Insights | Execution Desk V7',page_icon='🌙',
+st.set_page_config(page_title='Crescent Trade Terminal — BETA',page_icon='🌙',
                    layout='wide',initial_sidebar_state='expanded')
 NOW=lambda:datetime.now(ET)
 
@@ -48,7 +48,7 @@ def demo_pack():
 
 def init_state():
     defaults={'data_mode':'Demo — simulated','market_snapshot':None,'failure':{},
-        'plans':[],'frozen':{},'journal':[],'positions':{},'view':'Night Plan',
+        'plans':[],'frozen':{},'journal':[],'positions':{},'view':'The Watchtower',
         'last_stop':None,'events':pd.DataFrame(),'news':[], 'live_result':{},
         'last_refresh':None,'manual_event_block':False,'pins':', '.join(DEFAULT_WATCH),
         'source_caption':'','universe_caption':'','scan_errors':[],'include_etfs':True}
@@ -176,93 +176,19 @@ def open_issues():
     st.caption('Earnings dates, corporate filings, options spreads and geopolitical headlines are not automatically verified. Check independent sources before any live trade.')
 
 
-def render_night(snap):
-    draw_topbanner(snap)
-    st.subheader('Tomorrow’s execution plan')
-    st.caption('Night plans are ARMED/WATCH, never live READY. Levels are computed from completed daily candles and freeze only when you save them.')
-    plans=get_plans()
-    st.caption(f'Frozen focus slots: {len(st.session_state.frozen)} / 3. Clear outdated plans in Journal before adding replacements.')
-    armed=[p for p in plans if p.status=='ARMED']
-    watches=[p for p in plans if p.status in ('WATCH','BLOCKED','EXTENDED')]
-    a,b,c=st.columns(3)
-    a.metric('Planned candidates',len(plans));b.metric('Armed',len(armed));c.metric('Confirmed live triggers',0)
-    st.markdown(f'**Where strength is rotating:** {setup_overview(snap)}')
-    if armed:
-        st.markdown('#### Primary opportunities')
-        for p in armed[:3]:
-            st.markdown(card(p),unsafe_allow_html=True)
-            col1,col2=st.columns([1,3])
-            with col1:
-                if st.button('Freeze plan',key='night_freeze_'+p.id,disabled=p.id in st.session_state.frozen or len(st.session_state.frozen)>=3):
-                    st.session_state.frozen[p.id]=p.to_dict()
-                    st.session_state.journal.append({'at':NOW().isoformat(),'event':'PLAN_FROZEN','id':p.id,'symbol':p.symbol,'note':'Frozen from completed daily history'})
-                    st.success(f'{p.symbol}: plan saved for live monitoring.')
-            with col2:
-                st.caption('Frozen trigger and invalidation do not change with the next scan.')
-    else:
-        st.info('No qualifying ARMED setups in this data sample. Do not force a trade. Review WATCH candidates only.')
-    if watches:
-        with st.expander(f'Developing / blocked / extended ({len(watches)})',expanded=not armed):
-            for p in watches[:12]:
-                st.markdown(card(p),unsafe_allow_html=True)
-                if st.button(f'Freeze as WATCH: {p.symbol} {p.setup}',key='freeze_'+p.id,disabled=p.id in st.session_state.frozen or len(st.session_state.frozen)>=3):
-                    st.session_state.frozen[p.id]=p.to_dict()
-                    st.session_state.journal.append({'at':NOW().isoformat(),'event':'WATCH_FROZEN','id':p.id,'symbol':p.symbol,'note':'Not live actionable'})
-                    st.success('Saved as watch only; no entry permission.')
-    with st.expander('Why these names and not other tickers?'):
-        st.write('The research engine requires a completed daily uptrend/downtrend, liquidity, relative strength, and a developing pullback/breakout/failed-bounce structure. It rejects excessive stop distance and labels missing structural targets as WATCH. Sector ETF strength is separate context; quality scores are NOT win probabilities.')
-        st.write('The source stock universe remains 574 stocks. Only the tickers actually loaded are eligible; missing or stale tickers must never be interpreted as lacking setups.')
-    open_issues()
 
 
 def event_panel():
     e=st.session_state.events
     st.caption('Events come from uploaded CSV; no calendar was silently invented.')
     if e.empty:
-        st.warning('Event calendar NOT VERIFIED. Import dated macro/earnings events in Settings before relying on event-risk clearance.')
+        st.warning('Event calendar NOT VERIFIED. Import dated macro/earnings events in Terminal controls before relying on event-risk clearance.')
     else:
         now=NOW().replace(tzinfo=None);soon=e[(e['When ET']>=now-timedelta(days=1)) & (e['When ET']<=now+timedelta(days=10))]
         if soon.empty:st.info('No events in the next ten days in the uploaded calendar. This does not certify that no events exist.')
         else:st.dataframe(soon[['When ET','Title','Impact','Tickers','Confirmed','Source']],hide_index=True,use_container_width=True)
 
 
-def render_regime(snap):
-    draw_topbanner(snap)
-    st.subheader('Regime & leadership transfer')
-    st.caption('Sector returns are ETF proxies, not institutional fund-flow measurements. Breadth is not inferred from an ETF return.')
-    ctx=snap['context'];sector=ctx['sectors']
-    if sector.empty:st.warning('No comparable sector history.');return
-    data=sector[['Name','5D %','21D %','Vs SPY 5D pp','Vs SPY 21D pp','Above 21','Rotation']].copy()
-    st.dataframe(data,hide_index=True,use_container_width=True,height=410,
-        column_config={'5D %':st.column_config.NumberColumn(format='%.1f%%'),
-                       '21D %':st.column_config.NumberColumn(format='%.1f%%'),
-                       'Vs SPY 5D pp':st.column_config.NumberColumn(format='%+.1f'),
-                       'Vs SPY 21D pp':st.column_config.NumberColumn(format='%+.1f')})
-    bar=sector.sort_values('Vs SPY 21D pp')
-    st.bar_chart(bar.set_index('Name')[['Vs SPY 5D pp','Vs SPY 21D pp']],height=320)
-    st.caption('EMERGING means improving short horizon but not yet longer-horizon leadership. This is a descriptive heuristic, not a forecast.')
-    x,b=st.columns(2)
-    with x:
-        st.markdown('#### Index & participation proxies')
-        if ctx['benchmarks'].empty:st.info('Index data missing.')
-        else:st.dataframe(ctx['benchmarks'][['Symbol','5D %','21D %','Above 21','Trend']],hide_index=True,use_container_width=True)
-    with b:
-        st.markdown('#### Cross-asset context')
-        if ctx['cross'].empty:st.info('Cross-asset data missing.')
-        else:st.dataframe(ctx['cross'][['Name','Close','5D %','21D %','As of']],hide_index=True,use_container_width=True)
-        st.caption('*The yield index may be quoted in vendor-specific units; use observed changes, not assumed basis points.')
-    st.markdown('#### Scheduled risk & corporate events');event_panel()
-    st.markdown('#### Political, war, policy & earnings headlines')
-    st.caption('Headline feed is optional and UNVERIFIED. It never triggers or blocks trades automatically. Confirm material events with primary sources.')
-    query=st.text_input('News topic',value='global markets tariffs geopolitics energy healthcare earnings',key='news_query')
-    if st.button('Fetch headlines (read-only)'):
-        try:st.session_state.news=cached_headlines(query)
-        except Exception as exc:st.error(f'News feed unavailable: {type(exc).__name__}. Use primary news sources directly.')
-    for x in st.session_state.news:
-        url=str(x.get('URL',''))
-        if not url.startswith(('https://','http://')):continue
-        st.link_button(str(x.get('Title','Headline'))[:150],url)
-        st.caption(str(x.get('Published','Unknown publication time'))[:75])
 
 
 def plan_selector():
@@ -273,44 +199,6 @@ def plan_selector():
     return frozen.get(choice)
 
 
-def render_preopen(snap):
-    draw_topbanner(snap)
-    st.subheader('Pre-open revalidation')
-    st.caption('Gaps, earnings, global events and sector changes can invalidate last night’s plan. Premarket quotes do not authorize entries.')
-    plan=plan_selector()
-    if not plan:
-        st.info('Freeze an overnight plan in Night Plan first.');return
-    st.markdown(card(plan),unsafe_allow_html=True)
-    if st.button('Refresh this ticker’s premarket 5-minute quote'):
-        if 'SIMULATED' in snap['source']:
-            st.info('Simulation does not manufacture premarket prices.')
-        else:
-            try:
-                now=NOW()
-                # Market session semantics are checked before fetching provider bars.
-                if now.weekday()>=5 or not (time(4,0)<=now.time()<time(9,30)):
-                    st.info('Pre-open quote review is available on weekdays 04:00–09:30 ET.')
-                else:
-                    f=cached_intraday(plan['symbol'],extended=True)
-                    f=f[(f.index.tz_convert(ET).date==now.date())]
-                    if f.empty:st.warning('No current-session premarket bars from Yahoo.')
-                    else:
-                        previous=normalise(snap['frames'].get(plan['symbol'],pd.DataFrame()))
-                        if previous.empty:st.warning('No previous completed close; cannot assess gap.')
-                        else:
-                            q=preopen_assessment(plan,float(f.Close.iloc[-1]),float(previous.Close.iloc[-1]),f.index[-1],now)
-                            st.session_state['preopen_result']=q
-            except Exception as exc:st.error(f'Premarket quote unavailable: {type(exc).__name__}: {str(exc)[:170]}')
-    q=st.session_state.get('preopen_result')
-    if q and 'price' in q:
-        a,b=st.columns(2)
-        a.metric('Premarket quote',money(q['price']))
-        b.metric('Vs completed close',percentfmt(q['gap_pct']))
-        st.info(q['status']+' — '+q['reason'])
-        st.caption('Quote timestamp: '+q['asof']+'; volume may be thin or incomplete.')
-    elif q:st.info(q['status']+' — '+q['reason'])
-    st.markdown('#### Overnight event risk');event_panel()
-    st.warning('Before the open: no chasing a gap, no countertrend reversal based on frustration, and no READY state before verified RTH confirmation.')
 
 
 def live_result(plan):
@@ -436,8 +324,7 @@ def manual_manage(plan):
 
 
 def render_live(snap):
-    draw_topbanner(snap)
-    st.subheader('Execution desk · one decision at a time')
+    st.subheader('Focused setup review')
     if st.session_state.positions:
         st.info('A manual position is open. Entry scanning is suspended; manage the original plan first.')
     if st.session_state.positions:
@@ -449,11 +336,7 @@ def render_live(snap):
         else:plan=None
     else:plan=plan_selector()
     if plan is None:
-        st.info('Start with a saved plan. Open Night Plan, review a candidate, and select Freeze plan. Then return here to check its trigger.')
-        if st.button('Open Night Plan',key='live_open_night',type='primary'):
-            st.session_state.next_workspace='Night Plan'
-            st.session_state.view='Night Plan'
-            st.rerun()
+        st.info('Add a candidate to The Watchtower above to review its trigger and invalidation.')
         return
     st.markdown(card(plan),unsafe_allow_html=True)
     if plan['id'] not in st.session_state.positions:
@@ -486,49 +369,6 @@ def theme_table(snap):
     return pd.DataFrame(out)
 
 
-def render_research(snap):
-    draw_topbanner(snap)
-    st.subheader('Research depth · not the execution screen')
-    tabs=st.tabs(['Candidate discovery','90-theme participation','Air Gap study'])
-    with tabs[0]:
-        st.caption('Price/relative strength rankings from successfully loaded daily candles. Unscanned names are not losers.')
-        if snap['metrics'].empty:st.info('No qualifying stock history.');return
-        f=snap['metrics'].sort_values('RS 21D pp',ascending=False)
-        st.dataframe(f,hide_index=True,use_container_width=True,height=455)
-        st.caption(f"Coverage: {snap['loaded']} of {snap['attempted']} instruments returned candles, {snap['comparable']} align to SPY's completed session, and {len(f)} candidate instruments have comparable research metrics. Provider failures: {len(snap['fail'])}.")
-        if st.session_state.failure:
-            with st.expander('Unresolved tickers / provider failures'):
-                st.dataframe(pd.DataFrame([{'Symbol':k,'Issue':v} for k,v in st.session_state.failure.items()]),hide_index=True)
-    with tabs[1]:
-        st.caption('90 original Crescent analyst-curated baskets retained. Participation requires ≥3 members AND ≥60% basket coverage; missing baskets say so.')
-        st.dataframe(theme_table(snap),hide_index=True,use_container_width=True,height=470)
-    with tabs[2]:
-        st.caption('Secondary research: actual hourly EMA Cloud ladder when Yahoo 5-minute history is available. No automatic short from a leader pullback; no historical win probabilities.')
-        candidates=[s for s in snap['frames'] if s not in SECTORS and s not in BENCHMARKS and s not in CROSS_ASSETS]
-        if candidates:
-            symbol=st.selectbox('Stock for detailed Air Gap research',sorted(candidates),key='airgap_symbol')
-            if st.button('Examine 1H Cloud & Daily magnets',key='airgap_go'):
-                if 'SIMULATED' in snap['source']:
-                    st.info('Air Gap cloud scan requires actual 5-minute candles. Synthetic daily bars are not a valid substitute.')
-                else:
-                    try:
-                        five=cached_intraday(symbol)
-                        daily=snap['frames'][symbol].copy()
-                        tf={'1D':daily}
-                        for tfname,minutes in [('10m',10),('30m',30),('1H',60),('4H',240)]:
-                            tf[tfname]=bar_session_resample(five,minutes,regular_only=True)
-                        result=scan_symbol(symbol,tf,spy_bias='MIXED',source='hl2',sector_bias='UNKNOWN')
-                        st.session_state['airgap_study']=result
-                    except Exception as exc:
-                        st.error(f'Cloud study cannot qualify: {type(exc).__name__}: {str(exc)[:210]}')
-            result=st.session_state.get('airgap_study')
-            if result and result['symbol']==symbol:
-                a,b,c=st.columns(3)
-                a.metric('Structure',result['setup']);b.metric('Next genuine magnet',money(result['target']));c.metric('Cloud evidence grade',str(result['grade']))
-                st.write('**Technical reading:** '+result['reason'])
-                st.write('Hourly break timestamp: '+str((result.get('event') or {}).get('time','No confirmed recent break')))
-                st.caption('This is a historical structure research classification, NOT a current entry instruction. Score ignores SPY/sector confirmation unless a matching real data feed is available; stale data must not be called READY.')
-            st.caption('The original V6 Air Gap tab and its broader scanner remain untouched in your existing Crescent deployment.')
 
 
 def render_journal():
@@ -638,32 +478,102 @@ def sidebar_controls():
     st.sidebar.caption('No broker orders · no sizing · no fake win probabilities')
 
 
-def main():
-    init_state(); brand()
-    sidebar_controls()
-    if st.session_state.data_mode.startswith('Yahoo') and 'SIMULATED' in st.session_state.market_snapshot['source']:
-        st.error('Yahoo mode selected, but the displayed snapshot is still DEMO. Press “Run overnight research” in the sidebar to load actual history. Do not use simulated prices.')
-    st.caption('STANDALONE TEST APP • no changes to cresinstv.streamlit.app • paper planning only')
-    if st.session_state.scan_errors:
-        for w in st.session_state.scan_errors:st.warning(w)
-    if 'workspace_choice' not in st.session_state:
-        st.session_state.workspace_choice=st.session_state.view
-    if st.session_state.get('next_workspace'):
-        st.session_state.workspace_choice=st.session_state.pop('next_workspace')
-    choice=st.selectbox('Workspace',['Night Plan','Pre-open','Live Desk','Regime & Rotation','Research','Journal','Settings'],key='workspace_choice')
-    st.session_state.view=choice
-    snap=st.session_state.market_snapshot
-    if not snap:st.error('No market snapshot available. Select research mode in the sidebar and run it.');return
-    if choice=='Night Plan':render_night(snap)
-    elif choice=='Pre-open':render_preopen(snap)
-    elif choice=='Live Desk':render_live(snap)
-    elif choice=='Regime & Rotation':render_regime(snap)
-    elif choice=='Research':render_research(snap)
-    elif choice=='Journal':render_journal()
-    elif choice=='Settings':render_settings()
+
+
+
+def render_terminal(snap):
+    draw_topbanner(snap)
+    ctx = snap['context']
+    benchmarks = ctx['benchmarks']
+    if not benchmarks.empty:
+        columns = st.columns(len(benchmarks))
+        for col, (_, row) in zip(columns, benchmarks.iterrows()):
+            col.metric(str(row['Symbol']), str(row['Trend']), percentfmt(row['5D %']))
+    with st.expander('Sector leadership', expanded=True):
+        st.caption('ETF relative strength versus SPY · completed daily history')
+        sectors = ctx['sectors']
+        if sectors.empty:
+            st.info('Sector history unavailable.')
+        else:
+            st.dataframe(sectors[['Name','5D %','21D %','Vs SPY 21D pp','Rotation']],
+                         hide_index=True, use_container_width=True)
+
+    st.subheader('Ranked opportunities')
+    st.caption('Research candidates from loaded history. Saving a setup freezes its levels; it does not confirm an entry.')
+    plans = get_plans()
+    left, right = st.columns(2)
+    side = left.selectbox('Direction', ['All', 'LONG', 'SHORT'])
+    query = right.text_input('Find a symbol', placeholder='e.g. NVDA').strip().upper()
+    visible = [p for p in plans if (side == 'All' or p.direction == side) and (not query or query in p.symbol)]
+    if not visible:
+        st.info('No candidates match the current filters.')
+    columns = st.columns(3)
+    for col, plan in zip(columns, visible[:3]):
+        with col:
+            st.markdown(card(plan), unsafe_allow_html=True)
+            if st.button('Add to The Watchtower', key='add_'+plan.id,
+                         disabled=plan.id in st.session_state.frozen or len(st.session_state.frozen)>=3):
+                st.session_state.frozen[plan.id] = plan.to_dict()
+                st.session_state.journal.append({'at':NOW().isoformat(),
+                    'event':'PLAN_FROZEN' if plan.status=='ARMED' else 'WATCH_FROZEN',
+                    'id':plan.id,'symbol':plan.symbol,'note':'Frozen from completed daily history'})
+                st.rerun()
+    with st.expander(f'All matching candidates ({len(visible)})'):
+        st.dataframe(plans_frame(visible), hide_index=True, use_container_width=True)
+        if visible:
+            selected = st.selectbox('Candidate to monitor', list(range(len(visible))),
+                format_func=lambda i: f'{visible[i].symbol} · {visible[i].setup} · {visible[i].direction}')
+            plan = visible[selected]
+            if st.button('Save selected setup', key='save_candidate',
+                         disabled=plan.id in st.session_state.frozen or len(st.session_state.frozen)>=3):
+                st.session_state.frozen[plan.id] = plan.to_dict()
+                st.session_state.journal.append({'at':NOW().isoformat(),'event':'WATCH_FROZEN',
+                    'id':plan.id,'symbol':plan.symbol,'note':'Frozen research candidate; no entry permission'})
+                st.rerun()
+
     st.divider()
-    st.caption('CRESCENT INSIGHTS · V7 RESEARCH DESK · As-of '+str(snap['asof'])+
-               ' · All decisions require independent verification. No performance claims. No automatic orders.')
+    st.subheader('The Watchtower')
+    st.caption('Active setup monitoring · up to three frozen plans · checks run only when requested')
+    frozen = list(st.session_state.frozen.values())
+    if frozen:
+        rows = []
+        for plan in frozen:
+            result = st.session_state.live_result.get(plan['id'], {})
+            checked = result.get('checked_at')
+            fresh = False
+            if checked:
+                try:
+                    now = NOW()
+                    fresh = (now-datetime.fromisoformat(checked)).total_seconds() <= 180 and now.weekday()<5 and time(9,30)<=now.time()<time(16,0)
+                except (ValueError, TypeError):
+                    pass
+            state = 'OPEN' if plan['id'] in st.session_state.positions else (result.get('status','WATCH') if fresh else 'STALE' if result else 'AWAITING CHECK')
+            rows.append({'Symbol':plan['symbol'],'Setup':plan['setup'],'Side':plan['direction'],
+                'State':state,'Trigger':plan['trigger'],'Invalidation':plan['stop'],
+                'Target':plan.get('target'),'Checked at':checked or 'Not checked'})
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        render_live(snap)
+    else:
+        st.info('Your watchtower is clear. Add a ranked opportunity to begin monitoring.')
+
+    with st.expander('Session journal & backups'):
+        render_journal()
+    with st.expander('Terminal controls & event calendar'):
+        render_settings()
+
+
+def main():
+    init_state()
+    brand('Market intelligence · Active setup monitoring')
+    sidebar_controls()
+    snap = st.session_state.market_snapshot
+    if st.session_state.data_mode.startswith('Yahoo') and 'SIMULATED' in snap['source']:
+        st.error('The displayed snapshot is still simulated. Run research from the sidebar to load market history.')
+    for warning in st.session_state.scan_errors:
+        st.warning(warning)
+    render_terminal(snap)
+    st.divider()
+    st.caption('Crescent Trade Terminal — BETA · Standalone test application · Paper planning only · As of '+str(snap['asof']))
 
 
 if __name__=='__main__':main()
