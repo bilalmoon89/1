@@ -3,6 +3,7 @@ from pathlib import Path
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 import crescent_feeds
+import intraday_context
 from terminal_view import table
 import pandas as pd
 
@@ -23,6 +24,7 @@ def test_terminal_saves_candidate_and_opens_monitor(monkeypatch,tmp_path):
     st.cache_data.clear()
     frames,_=crescent_feeds.generate_demo()  # Deterministic offline test fixture only.
     monkeypatch.setattr(crescent_feeds,'yahoo_daily',lambda *a,**k:(frames,{}))
+    monkeypatch.setattr(intraday_context,'fetch_intraday',lambda *a,**k:({},{}))
     source=Path('app.py').read_text(encoding='utf-8').replace('NOW=lambda:datetime.now(ET)',
         'NOW=lambda:datetime(2026,10,30,17,0,tzinfo=ET)')
     test_app=tmp_path/'app.py'

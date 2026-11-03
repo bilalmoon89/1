@@ -18,6 +18,7 @@ from crescent_feeds import (symbols_from_file,seed_universe,tv_leadership,
     yahoo_daily,yahoo_five_minute,read_events,risk_events,news_rss)
 from crescent_ui import card
 from terminal_view import CSS, header, overview, opportunity, table, e
+from intraday_context import fetch_intraday, session_rows, tradingview_quotes
 from crescent_charts import candles
 from rotation_themes import THEMES
 from cloud_engine import bar_session_resample,scan_symbol
@@ -35,6 +36,31 @@ def cached_daily(symbols_tuple):
 @st.cache_data(ttl=105,show_spinner=False)
 def cached_intraday(symbol,extended=False):
     return yahoo_five_minute(symbol,days='10d',extended=extended)
+
+
+@st.cache_data(ttl=55,show_spinner=False)
+def cached_context_bars():
+    return fetch_intraday(tuple(dict.fromkeys(['SPY','QQQ','IWM','^VIX']+list(SECTORS))))
+
+
+@st.cache_data(ttl=60,show_spinner=False)
+def cached_tv_quotes(symbols):
+    return tradingview_quotes(symbols)
+
+
+@st.fragment(run_every='60s')
+def render_intraday_context():
+    snap=st.session_state.market_snapshot
+    context={'rows':pd.DataFrame(),'status':'UNAVAILABLE'}
+    if snap.get('loaded',0):
+        try:
+            frames,failures=cached_context_bars()
+            context=session_rows(frames,snap['frames'],NOW())
+            if failures:st.caption(f'Intraday coverage: {len(frames)} series · {len(failures)} unavailable')
+        except Exception as exc:
+            st.caption(f'Intraday feed unavailable: {type(exc).__name__}. No daily substitute is shown.')
+    st.session_state.intraday_context=context
+    st.markdown(overview(snap,get_plans(),st.session_state.frozen,context),unsafe_allow_html=True)
 
 
 @st.cache_data(ttl=900,show_spinner=False)
@@ -486,6 +512,23 @@ def render_terminal(snap, side, search):
                 st.session_state.frozen[plan.id]=plan.to_dict()
                 st.session_state.journal.append({'at':NOW().isoformat(),'event':'WATCH_FROZEN','id':plan.id,'symbol':plan.symbol,'note':'Frozen research candidate'})
                 st.rerun()
+    with st.expander('TradingView stock quotes / comparison'):
+        st.caption('Public screener snapshot, separate from your connected TradingView account. Some stocks are 15 minutes delayed; ETF coverage was unavailable in testing. These quotes never authorize entries.')
+        if st.button('Fetch TradingView quotes'):
+            symbols=tuple(dict.fromkeys([p.symbol for p in shown[:20]]+[s.strip().upper() for s in st.session_state.pins.split(',') if s.strip()]))
+            try:
+                quotes=cached_tv_quotes(symbols)
+                st.session_state.tv_quote_comparison=quotes
+                missing=sorted(set(symbols)-set(quotes.Symbol if not quotes.empty else []))
+                st.session_state.tv_quote_missing=missing
+            except Exception as exc:
+                st.session_state.tv_quote_comparison=pd.DataFrame()
+                st.warning(f'TradingView quote request failed: {type(exc).__name__}. Yahoo data remains separate.')
+        quotes=st.session_state.get('tv_quote_comparison')
+        if quotes is not None:
+            dark_frame(quotes)
+            missing=st.session_state.get('tv_quote_missing',[])
+            if missing:st.caption('No TradingView quote returned: '+', '.join(missing))
     with st.expander('Journal / session backup'):render_journal()
     with st.expander('Risk controls / event calendar'):render_settings()
 
@@ -495,7 +538,7 @@ def main():
     st.markdown(CSS,unsafe_allow_html=True)
     st.markdown(header(st.session_state.last_refresh),unsafe_allow_html=True)
     snap=st.session_state.market_snapshot
-    st.markdown(overview(snap,get_plans(),st.session_state.frozen),unsafe_allow_html=True)
+    render_intraday_context()
     controls=st.columns([1.2,1,1,1,1.4])
     breadth=controls[0].selectbox('Stock universe',['Balanced 60','Balanced 120','Full 574'])
     side=controls[1].selectbox('Show',['All','LONG','SHORT'],format_func=lambda x:{'All':'All setups','LONG':'▲ Bullish','SHORT':'▼ Bearish'}[x])
@@ -506,7 +549,7 @@ def main():
     pins=controls[4].text_input('My list',value=st.session_state.pins,placeholder='Tickers, comma separated')
     st.session_state.pins=pins
     with st.expander('Data connection / coverage'):
-        st.caption('Yahoo Finance provides daily and 5-minute OHLCV. TradingView discovery is optional. Provider delays and missing symbols are shown explicitly.')
+        st.caption('Sector Today % compares completed 5-minute regular-session bars with the previous close. Vs SPY is session relative strength in percentage points. VWAP uses this regular session only. Context refreshes every 60 seconds; stale/closed sessions are labelled. Daily setup rankings and entry checks remain separate.')
         st.caption(f'Last refresh: {updated or "Awaiting provider"} · {snap.get("loaded",0)} histories loaded')
         discovery=st.checkbox('Use TradingView public screener for discovery',value=False)
         st.session_state.include_etfs=st.checkbox('Include ETF setup candidates',value=st.session_state.include_etfs)

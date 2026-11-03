@@ -2,7 +2,7 @@
 from html import escape
 import math
 import pandas as pd
-from crescent_engine import snapshot, money
+from crescent_engine import snapshot, money, SECTORS
 
 def e(value):
     return escape(str(value), quote=True)
@@ -23,46 +23,63 @@ def table(frame):
     rows=''.join('<tr>'+''.join(f'<td>{e("—" if pd.isna(x) else x)}</td>' for x in row)+'</tr>' for row in frame.itertuples(index=False,name=None))
     return f'<div class="table-scroll"><table class="terminal-table"><thead><tr>{heads}</tr></thead><tbody>{rows}</tbody></table></div>'
 
-def spark(frame, color):
+def spark(frame, color, label="Last 32 completed daily closes"):
     if frame is None or frame.empty:return '<span class="no-series">NO HISTORY</span>'
     values=frame.Close.tail(32).astype(float).tolist()
     low,high=min(values),max(values)
     points=' '.join(f'{i*120/max(1,len(values)-1):.1f},{32-(x-low)*26/max(high-low,.00001):.1f}' for i,x in enumerate(values))
-    return f'<svg class="spark" viewBox="0 0 124 38" aria-label="Last 32 completed daily closes"><polyline points="{points}" fill="none" stroke="{color}" stroke-width="1.5"/></svg>'
+    return f'<svg class="spark" viewBox="0 0 124 38" aria-label="{e(label)}"><polyline points="{points}" fill="none" stroke="{color}" stroke-width="1.5"/></svg>'
 
 def panel(title, body, meta=''):
     return f'<section class="terminal-panel"><div class="panel-head"><b><span class="grip">⠿</span> {e(title)}</b><span>{e(meta)}</span></div><div class="panel-body">{body}</div></section>'
 
 def header(updated=None):
-    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● Yahoo Finance</span><span>Daily history · delayed</span><span class="build-pill">CTT 7.2</span></div></div>'
+    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● Yahoo Finance</span><span>5m intraday · provider delay</span><span class="build-pill">CTT 7.3</span></div></div>'
 
-def overview(snap, plans, frozen):
+def overview(snap, plans, frozen, intraday=None):
+    intraday=intraday or {}
+    intra=intraday.get("rows",pd.DataFrame())
     ctx=snap['context'];frames=snap['frames'];posture=ctx.get('posture','UNKNOWN')
     asof=snap.get('asof') or 'Not loaded'
-    regime=f'<div class="regime-strip"><span class="pill amber">{e(posture)}</span><div><b>{e(ctx.get("reason","Market history has not been loaded."))}</b><small>Completed daily structure · {e(asof)} · Intraday entry requires a separate 10m / VWAP check.</small></div><span class="strip-right">MARKET CONTEXT</span></div>'
+    market=intra[intra.Symbol.isin(['SPY','QQQ','IWM'])] if not intra.empty else pd.DataFrame()
+    covered=market[market['Vs VWAP %'].notna()] if not market.empty else pd.DataFrame()
+    above=int((covered['Vs VWAP %']>0).sum()) if not covered.empty else 0
+    state=intraday.get('status','UNAVAILABLE')
+    description=f'{above}/{len(covered)} benchmark ETFs above session VWAP. Sector leadership is ranked versus SPY today.' if len(covered) else 'Intraday benchmark history unavailable. No daily readings are substituted.'
+    bar=intraday.get('asof') or 'Unavailable'
+    regime=f'<div class="regime-strip"><span class="pill amber">INTRADAY · {e(state)}</span><div><b>{e(description)}</b><small>Completed 5-minute bar · {e(bar)} · Yahoo provider delay · 60-second refresh.</small></div><span class="strip-right">SESSION CONTEXT</span></div>'
     quotes=[]
     for symbol in ['^VIX','SPY','QQQ','IWM']:
-        f=frames.get(symbol);m=snapshot(f) if f is not None else None
-        last=(f'{m["price"]:.2f}' if symbol=='^VIX' else money(m['price'])) if m else '—'
-        change=m.get('r5') if m else None
-        trend=('BULL' if m['trend_up'] else 'BEAR' if m['trend_down'] else 'MIXED') if m else 'NO DATA'
-        if symbol=='^VIX' and m:trend='ELEVATED' if m['price']>20 else 'NORMAL'
-        quote_tone=('down' if change and change>0 else 'up') if symbol=='^VIX' and m else tone(change)
-        quotes.append(f'<div class="quote"><div><b>{e("VIX" if symbol=="^VIX" else symbol)}</b> <span class="pill {quote_tone}">{trend}</span><strong>{last}</strong></div><div class="quote-change {quote_tone}">{num(change,"%")}<small>5 sessions</small></div>{spark(f,"#37ca94" if quote_tone=="up" else "#ed6e7c")}</div>')
-    sector=ctx['sectors'];rows=[]
+        matches=intra[intra.Symbol==symbol] if not intra.empty else pd.DataFrame()
+        r=matches.iloc[0] if not matches.empty else None
+        change=r['Today %'] if r is not None else None
+        last=(f'{r["Last"]:.2f}' if symbol=='^VIX' else money(r['Last'])) if r is not None else '—'
+        trend=('ABOVE VWAP' if r['Vs VWAP %']>0 else 'BELOW VWAP') if r is not None and pd.notna(r['Vs VWAP %']) else 'NO DATA'
+        if symbol=='^VIX' and r is not None:trend='ELEVATED' if r['Last']>20 else 'NORMAL'
+        state=intraday.get('status','UNAVAILABLE')
+        if state!='CURRENT':trend=state
+        quote_tone=('down' if change and change>0 else 'up') if symbol=='^VIX' and r is not None else tone(change)
+        quotes.append(f'<div class="quote"><div><b>{e("VIX" if symbol=="^VIX" else symbol)}</b> <span class="pill {quote_tone}">{trend}</span><strong>{last}</strong></div><div class="quote-change {quote_tone}">{num(change,"%")}<small>vs previous close</small></div>{spark(intraday.get("frames",{}).get(symbol),"#37ca94" if quote_tone=="up" else "#ed6e7c","Completed 5-minute RTH closes")}</div>')
+    sector=intra[intra.Symbol.isin(SECTORS)].sort_values('Vs SPY pp',ascending=False) if not intra.empty else pd.DataFrame()
+    rows=[]
     if not sector.empty:
         for _,r in sector.iterrows():
-            rows.append(f'<tr><td><b>{e(r["Symbol"])}</b> <span class="muted">{e(r["Name"])}</span></td><td class="{tone(r["5D %"])}">{num(r["5D %"],"%")}</td><td class="{tone(r["Vs SPY 21D pp"])}">{num(r["Vs SPY 21D pp"])}</td><td><span class="tiny-state">{e(r["Rotation"])}</span></td></tr>')
-    sectors='<table class="terminal-table"><thead><tr><th>SECTOR</th><th>5D %</th><th>RS 21D</th><th>STRENGTH</th></tr></thead><tbody>'+''.join(rows)+'</tbody></table>' if rows else '<div class="empty">Awaiting sector ETF history.<br>No estimated sector readings.</div>'
+            vwap='Above' if r['Vs VWAP %']>0 else 'Below' if pd.notna(r['Vs VWAP %']) else '—'
+            rows.append(f'<tr><td><b>{e(r["Symbol"])}</b> <span class="muted">{e(r["Name"])}</span></td><td class="{tone(r["Today %"])}">{num(r["Today %"],"%")}</td><td class="{tone(r["Vs SPY pp"])}">{num(r["Vs SPY pp"])}</td><td class="{tone(r["Vs VWAP %"])}">{vwap}</td></tr>')
+    sectors='<table class="terminal-table"><thead><tr><th>SECTOR</th><th>TODAY %</th><th>VS SPY pp</th><th>VWAP</th></tr></thead><tbody>'+''.join(rows)+'</tbody></table>' if rows else '<div class="empty">Intraday sector data unavailable.<br>Daily performance is not substituted.</div>'
     forming=[p for p in plans if p.status in ('ARMED','WATCH')][:3]
     setups=''.join(f'<div class="forming"><b class="{ "up" if p.direction=="LONG" else "down"}">{e(p.direction)} {e(p.symbol)}</b><span class="tiny-state">{e(p.status)}</span><p>{e(p.setup)}</p><div>Trigger <b>{money(p.trigger)}</b><br>Invalidation <b>{money(p.stop)}</b><br>Target <b>{money(p.target)}</b></div></div>' for p in forming) or '<div class="empty">No forming setups from loaded history.<br>Run a scan to assess candidates.</div>'
     status=f'<span class="pill amber">{e(posture)}</span><p>{e(ctx.get("reason","No benchmark coverage."))}</p><div class="status-line">Daily close <b>{e(asof)}</b></div><div class="status-line">Coverage <b>{snap.get("loaded",0)} instruments</b></div><div class="status-line">Entry confirmation <b>On request</b></div><div class="micro-note">Daily regime is not a live cloud reading. Research scores are not win probabilities.</div>'
     rotations=''
-    if not sector.empty:
+    stamp=intraday.get('asof') or 'Unavailable'
+    label=intraday.get('status','UNAVAILABLE')
+    if not sector.empty and pd.notna(sector.iloc[0]['Vs SPY pp']):
         lead=sector.iloc[0]
-        rotations=f'<div class="rotation-lead"><small>RELATIVE LEADER / 21 SESSIONS</small><h3>{e(lead["Name"])}</h3><b class="up">{e(lead["Symbol"])} · {num(lead["Vs SPY 21D pp"])} pp vs SPY</b></div><div class="sector-chips">'+''.join(f'<span>{e(r["Symbol"])} <b class="{tone(r["Vs SPY 5D pp"])}">{num(r["Vs SPY 5D pp"])}</b></span>' for _,r in sector.iterrows())+'</div>'
-    else:rotations='<div class="empty">Rotation requires comparable SPY and sector ETF candles.</div>'
-    return regime+'<div class="quote-strip">'+''.join(quotes)+'</div><div class="context-grid">'+panel('Sectors',sectors,'ETF proxies')+panel('Setups forming',setups,f'{len(forming)} heads-up')+panel('Market status',status,'Daily structure')+panel('Sector rotation',rotations,'Relative strength')+'</div>'
+        rotations=f'<div class="rotation-lead"><small>SESSION RELATIVE LEADER / {e(label)}</small><h3>{e(lead["Name"])}</h3><b class="{tone(lead["Vs SPY pp"])}">{e(lead["Symbol"])} · {num(lead["Vs SPY pp"])} pp vs SPY today</b></div><div class="sector-chips">'+''.join(f'<span>{e(r["Symbol"])} <b class="{tone(r["Vs SPY pp"])}">{num(r["Vs SPY pp"])}</b></span>' for _,r in sector.iterrows())+'</div>'
+    else:rotations='<div class="empty">Rotation requires comparable intraday SPY and sector bars.</div>'
+    rotations+=f'<div class="micro-note">Completed bar close: {e(stamp)}<br>Yahoo 5m · {e(label)} · Refresh every 60s</div>'
+    return regime+'<div class="quote-strip">'+''.join(quotes)+'</div><div class="context-grid">'+panel('Sectors · intraday',sectors,label)+panel('Setups forming',setups,f'{len(forming)} heads-up')+panel('Daily backdrop',status,'Daily structure')+panel('Sector rotation',rotations,'Today vs SPY')+'</div>'
+
 
 def opportunity(plan, rank, frames):
     p=plan.to_dict() if hasattr(plan,'to_dict') else plan
@@ -102,5 +119,16 @@ h3{font-size:15px!important;padding:5px 0!important}p{font-size:12px;line-height
 [data-testid="stDataFrame"]{background:#101821!important}footer{display:none!important}
 @media(max-width:1100px){.context-grid{grid-template-columns:1.3fr 1fr}.header-meta{gap:8px}.header-meta>span:nth-child(2){display:none}.quote{padding:10px}.terminal-brand strong{font-size:18px}}
 @media(max-width:680px){.block-container{padding:16px 10px 35px!important}.terminal-header{align-items:flex-start}.terminal-brand strong{font-size:14px}.terminal-brand strong span{display:block}.terminal-brand small{font-size:6px;letter-spacing:.08em}.header-meta{font-size:8px;display:block}.header-meta>span{display:block;margin-bottom:5px}.quote-strip{grid-template-columns:repeat(2,1fr)}.quote{border-bottom:1px solid var(--line)}.context-grid{grid-template-columns:1fr}.panel-body{height:auto;max-height:270px;min-height:140px}.strip-right{display:none}.regime-strip{align-items:flex-start}.regime-strip>.pill{font-size:7px}.quote strong{font-size:14px}}
+/* Readability pass: no critical trading values below 12px. */
+:root{--muted:#a5b3c5}
+.panel-head{font-size:13px;padding:11px 12px}.panel-head span{font-size:11px}.panel-body{height:290px;font-size:13px;padding:12px}.panel-body p{font-size:13px;line-height:1.6}
+.terminal-table{font-size:13px!important}.terminal-table th{font-size:11px;padding:10px 7px}.terminal-table td{padding:9px 7px}.terminal-table td .muted{font-size:11px;display:block;white-space:normal}.tiny-state{font-size:11px}
+.forming{font-size:13px;padding:11px}.forming div{font-size:12px}.status-line{font-size:12px}.micro-note{font-size:11px;color:#a5b3c5}.empty{font-size:13px}
+.regime-strip b{font-size:13px}.regime-strip small{font-size:11px}.pill{font-size:10px}.quote b{font-size:13px}.quote strong{font-size:21px}.quote-change{font-size:13px}.quote-change small{font-size:10px}
+.rotation-lead small{font-size:10px}.rotation-lead b{font-size:12px}.sector-chips>span{font-size:11px}.sector-chips{grid-template-columns:repeat(2,1fr)}
+.section-heading{font-size:14px;padding:11px 12px}.section-heading span{font-size:11px}.opportunity{min-height:265px}.opportunity p{font-size:13px;line-height:1.65}.price-line{font-size:13px}.setup-chip{font-size:11px}.op-state,.rank{font-size:11px}.op-head>b{font-size:21px}.level-grid small{font-size:10px}.level-grid b{font-size:14px}.op-footer{font-size:12px}.terminal-foot{font-size:11px}
+[data-testid="stWidgetLabel"] p{font-size:12px!important}input,[data-baseweb="select"]>div{font-size:14px!important}[data-testid="stButton"] button{min-height:40px!important;font-size:13px!important}.stButton p{font-size:13px!important}[data-testid="stExpander"] summary p{font-size:13px!important}[data-testid="stCaptionContainer"] p{font-size:12px!important}
+@media(min-width:1101px) and (max-width:1500px){.context-grid{grid-template-columns:1.35fr 1fr}.panel-body{height:280px}}
+@media(max-width:680px){.terminal-header{flex-wrap:wrap}.terminal-brand strong{font-size:18px}.terminal-brand small{font-size:10px;letter-spacing:.04em}.header-meta{display:flex;flex-wrap:wrap;font-size:11px}.terminal-brand em{font-size:10px}.terminal-header .moon{font-size:30px}.regime-strip{flex-direction:column}.regime-strip b{font-size:13px}.regime-strip small{font-size:12px}.regime-strip>.pill{font-size:10px}.quote{padding:12px 9px;flex-wrap:wrap;gap:5px}.quote strong{font-size:20px}.quote b{font-size:12px}.quote-change{font-size:12px}.spark{max-width:100%;width:100%;height:30px}.panel-body{height:auto;max-height:380px;min-height:0}.terminal-table{font-size:12px!important}.terminal-table th{font-size:10px;white-space:normal}.terminal-table td{padding:9px 5px}.terminal-table td:first-child{max-width:120px}.section-heading{align-items:flex-start;gap:8px;flex-direction:column}.opportunity{min-height:0}.op-head{flex-wrap:wrap}.level-grid b{font-size:15px}[data-testid="stButton"] button{min-height:44px!important}input{font-size:16px!important}}
 </style>
 '''
