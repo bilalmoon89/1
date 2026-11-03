@@ -54,12 +54,14 @@ def session_rows(frames,daily,now=None):
     rows=[];series={}
     for symbol,f in prepared.items():
         f=f[(f.index.date==day)&(f.index<=anchor)]
-        if f.empty or anchor-f.index[-1]>pd.Timedelta(minutes=10):continue
+        if f.empty or f.index[-1]!=anchor:continue
         prior=normalise(daily.get(symbol,pd.DataFrame()))
         if not prior.empty:prior=prior[prior.index.date<day]
         previous=float(prior.Close.iloc[-1]) if not prior.empty else None
         close=float(f.Close.iloc[-1]);volume=float(f.Volume.sum())
-        vwap=float((((f.High+f.Low+f.Close)/3)*f.Volume).sum()/volume) if volume>0 else None
+        expected=pd.date_range(pd.Timestamp(datetime.combine(day,time(9,30)),tz=ET),anchor,freq='5min')
+        complete_session=len(f)==len(expected) and f.index.equals(expected)
+        vwap=float((((f.High+f.Low+f.Close)/3)*f.Volume).sum()/volume) if volume>0 and complete_session else None
         opened=float(f.Open.iloc[0])
         # No from-open reading unless the actual 09:30 opening candle exists.
         from_open=(close/opened-1)*100 if f.index[0].time()==time(9,30) and opened>0 else None

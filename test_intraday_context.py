@@ -41,3 +41,10 @@ def test_missing_previous_close_does_not_invent_today_return():
     result=session_rows({'SPY':bars([100]*4),'XLK':bars([100]*4)},{},datetime(2026,11,3,9,42,tzinfo=ET))
     assert result['rows']['Today %'].isna().all()
     assert result['rows']['Vs SPY pp'].isna().all()
+
+
+def test_missing_session_open_does_not_claim_session_vwap():
+    frame=bars([100]*4).iloc[2:]
+    result=session_rows({'SPY':frame},histories(),datetime(2026,11,3,9,42,tzinfo=ET))
+    assert result['rows']['VWAP'].isna().all()
+    assert result['rows']['From open %'].isna().all()
