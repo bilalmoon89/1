@@ -7,7 +7,9 @@ The previous workspace tabs have been replaced by one screen:
 - Market regime and benchmark context.
 - Sector leadership from completed daily ETF history.
 - Ranked opportunities with direction and symbol filters.
-- **The Watchtower**: up to three frozen setups, trigger checks, invalidation levels, focused charts, and manual position management.
+- Six ranked setup cards by default, with options to display 12 or 24 from the same loaded universe. All qualifying candidates and sector-balanced views share the existing entry criteria.
+- **The Watchtower**: follow up to 12 setups and promote up to three into focus for trigger checks, focused charts, and manual position management. Following never grants entry permission.
+- **Theme rotation**: intraday return, SPY-relative movement, session VWAP participation and daily lifecycle for observed members of the existing 90 curated baskets. Partial coverage is labelled on every basket.
 - Expandable session journal, JSON backups, event calendar and terminal controls.
 
 ## Run
@@ -30,7 +32,9 @@ The interface follows the supplied TapeReader reference: a compact masthead, mar
 
 ## Behavior preserved
 
-The existing calculation engine, feeds, universe files, event checks, session backup schema, three-plan limit and live-entry gates are retained. Research candidates are never treated as confirmed entries. Old session JSON backups remain compatible.
+The existing calculation engine, feeds, universe files, event checks, three-plan focus limit and live-entry gates are retained. The broader candidate view removes only the presentation cap of two names per sector. Research candidates are never treated as confirmed entries. Session JSON adds an optional `following` field; valid older backups restore into both the followed list and focus list.
+
+Theme intraday requests are limited to already-loaded stocks in baskets with at least two observed members. Definitions alone never cause additional tickers to be added to the selected universe. Themes need at least three members and 70% basket coverage for a broad-coverage label; partial readings are explicitly averages of observed members.
 
 The former Night Plan, Pre-open, Live Desk, Regime & Rotation, and Research screens are no longer navigation destinations. This rework does not add new Air Gap detection rules or data services. Legacy screenshots and release documents are retained under `docs/legacy` for historical reference only.
 

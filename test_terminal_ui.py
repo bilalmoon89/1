@@ -31,9 +31,13 @@ def test_terminal_saves_candidate_and_opens_monitor(monkeypatch,tmp_path):
     test_app.write_text(source,encoding='utf-8')
     app=AppTest.from_file(str(test_app),default_timeout=60).run()
     assert not app.exception
-    choices=[x for x in app.button if x.label=='＋ Watch setup' and not x.disabled]
-    assert choices
+    choices=[x for x in app.button if x.label=='＋ Follow setup' and not x.disabled]
+    assert len(choices)==6
     choices[0].click().run()
+    assert not app.exception
+    assert len(app.session_state['following']) == 1
+    assert not app.session_state['frozen']
+    next(x for x in app.button if x.label=='Move to focus').click().run()
     assert not app.exception
     assert len(app.session_state['frozen']) == 1
     assert 'Focused setup review' in [x.value for x in app.subheader]

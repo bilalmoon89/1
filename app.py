@@ -19,6 +19,8 @@ from crescent_feeds import (symbols_from_file,seed_universe,tv_leadership,
 from crescent_ui import card
 from terminal_view import CSS, header, overview, opportunity, table, e
 from intraday_context import fetch_intraday, session_rows, tradingview_quotes
+from theme_rotation import analyze_rotation, theme_symbols
+from watchtower import follow_plan, focus_plan, FOLLOW_LIMIT, FOCUS_LIMIT
 from crescent_charts import candles
 from rotation_themes import THEMES
 from cloud_engine import bar_session_resample,scan_symbol
@@ -39,8 +41,8 @@ def cached_intraday(symbol,extended=False):
 
 
 @st.cache_data(ttl=55,show_spinner=False)
-def cached_context_bars():
-    return fetch_intraday(tuple(dict.fromkeys(['SPY','QQQ','IWM','^VIX']+list(SECTORS))))
+def cached_context_bars(symbols):
+    return fetch_intraday(symbols)
 
 
 @st.cache_data(ttl=60,show_spinner=False)
@@ -54,13 +56,17 @@ def render_intraday_context():
     context={'rows':pd.DataFrame(),'status':'UNAVAILABLE'}
     if snap.get('loaded',0):
         try:
-            frames,failures=cached_context_bars()
+            symbols=tuple(dict.fromkeys(['SPY','QQQ','IWM','^VIX']+list(SECTORS)+theme_symbols(snap['frames'])))
+            frames,failures=cached_context_bars(symbols)
             context=session_rows(frames,snap['frames'],NOW())
             if failures:st.caption(f'Intraday coverage: {len(frames)} series · {len(failures)} unavailable')
         except Exception as exc:
             st.caption(f'Intraday feed unavailable: {type(exc).__name__}. No daily substitute is shown.')
     st.session_state.intraday_context=context
     st.markdown(overview(snap,get_plans(),st.session_state.frozen,context),unsafe_allow_html=True)
+    themes=analyze_rotation(snap['frames'],context)
+    st.session_state.theme_rotation=themes
+    render_theme_rotation(themes)
 
 
 @st.cache_data(ttl=900,show_spinner=False)
@@ -72,7 +78,7 @@ def cached_headlines(query):
 
 def init_state():
     defaults={'data_mode':'Yahoo Finance — beta','market_snapshot':None,'failure':{},
-        'plans':[],'frozen':{},'journal':[],'positions':{},'view':'The Watchtower',
+        'plans':[],'all_plans':[],'frozen':{},'following':{},'journal':[],'positions':{},'view':'The Watchtower',
         'last_stop':None,'events':pd.DataFrame(),'news':[], 'live_result':{},
         'last_refresh':None,'manual_event_block':False,'pins':', '.join(DEFAULT_WATCH),
         'source_caption':'','universe_caption':'','scan_errors':[],'include_etfs':True}
@@ -85,6 +91,8 @@ def init_state():
         st.session_state.frozen={k:v for k,v in st.session_state.frozen.items() if 'SIMULATED' not in v.get('source','')}
         st.session_state.live_result={}
     st.session_state.data_mode='Yahoo Finance — beta'
+    for item in st.session_state.frozen.values():
+        if len(st.session_state.following)<FOLLOW_LIMIT:follow_plan(st.session_state.following,item)
     if st.session_state['market_snapshot'] is None:
         install_snapshot({},'Yahoo Finance · awaiting data', {})
         st.session_state.last_refresh=None
@@ -161,6 +169,7 @@ def install_snapshot(frames,source,fail):
         'comparable':sum(1 for f in daily.values() if (snapshot(f) and snapshot(f)['asof']==context['asof'])),
         'fail':fail}
     st.session_state.plans=rank_plans(plans)
+    st.session_state.all_plans=rank_plans(plans,max_per_sector=max(2,len(plans)))
     st.session_state.failure=fail
     st.session_state.live_result={}
     st.session_state.source_caption=source
@@ -393,7 +402,7 @@ def render_journal():
             st.session_state.journal.append({'at':NOW().isoformat(),'event':'PLAN_REMOVED','id':removal,
                 'symbol':removed['symbol'],'note':'Removed from current focus; original plan event preserved'})
             st.success('Plan removed from active watchlist. Export backup to preserve change.');st.rerun()
-    payload={'schema':'crescent-v7-session-1','frozen':frozen,'positions':st.session_state.positions,
+    payload={'schema':'crescent-v7-session-1','frozen':frozen,'following':st.session_state.following,'positions':st.session_state.positions,
              'last_stop':st.session_state.last_stop,
              'journal':st.session_state.journal,'exported_at':NOW().isoformat()}
     st.download_button('Export session backup JSON',data=json.dumps(payload,indent=2,default=str),
@@ -406,7 +415,11 @@ def render_journal():
             if data.get('schema')!='crescent-v7-session-1' or not isinstance(data.get('journal'),list) or not isinstance(data.get('frozen'),dict):
                 raise ValueError('Unexpected backup schema')
             if len(data['journal'])>5000 or len(data['frozen'])>500:raise ValueError('Backup exceeds allowed limits')
-            st.session_state.frozen={k:v for k,v in data['frozen'].items() if isinstance(v,dict) and all(n in v for n in ['symbol','trigger','stop','direction','id'])}
+            restored=data.get('following',data['frozen'])
+            if not isinstance(restored,dict):raise ValueError('Unexpected followed-setup format')
+            if len(data['frozen'])>FOCUS_LIMIT or len(restored)>FOLLOW_LIMIT:raise ValueError('Backup exceeds 3 focus or 12 follow slots')
+            st.session_state.frozen={k:v for k,v in data['frozen'].items() if isinstance(v,dict) and all(n in v for n in ['symbol','setup','trigger','stop','direction','id'])}
+            st.session_state.following={k:v for k,v in restored.items() if isinstance(v,dict) and all(n in v for n in ['symbol','setup','trigger','stop','direction','id'])}
             st.session_state.journal=[x for x in data['journal'] if isinstance(x,dict)]
             st.session_state.positions={k:v for k,v in data.get('positions',{}).items() if k in st.session_state.frozen and isinstance(v,dict)}
             st.session_state.last_stop=data.get('last_stop') if isinstance(data.get('last_stop'),str) else None
@@ -469,49 +482,91 @@ def refresh_market(breadth, pins, discovery):
             st.session_state.scan_errors=[f'Market feed unavailable: {type(exc).__name__}: {str(exc)[:140]}. No simulated fallback.']
 
 
+def render_theme_rotation(themes):
+    st.markdown('<div class="section-heading">Theme rotation <span>Observed members from the current universe · partial baskets are labelled</span></div>',unsafe_allow_html=True)
+    if themes.empty:
+        st.markdown('<div class="terminal-panel empty">No theme has two comparable members loaded yet. Theme membership never expands the selected universe.</div>',unsafe_allow_html=True)
+        return
+    cards=[]
+    for _,row in themes.head(3).iterrows():
+        value=row['Today vs SPY pp']
+        valid=finite(value)
+        color='up' if valid and value>0 else 'down' if valid and value<0 else 'muted'
+        reading=f'{value:+.2f} pp' if valid else '—'
+        coverage=row['Session members']
+        cards.append(f'<div class="theme-tile"><div class="theme-title">{e(row["Theme"])}</div><div class="theme-reading {color}">{reading}<small>vs SPY today · observed members</small></div><div class="theme-meta"><span>{e(coverage)} intraday</span><span>{e(row["Session coverage"])}</span></div><div class="micro-note">Above VWAP {e(row["Above VWAP"])} · {e(row["Session status"])}</div></div>')
+    st.markdown('<div class="theme-grid">'+''.join(cards)+'</div>',unsafe_allow_html=True)
+    with st.expander(f'Theme detail · {len(themes)} observed / {len(THEMES)} defined baskets'):
+        st.caption('Equal-weight averages of available members, not full-theme performance or fund flows. Broad coverage requires at least three members and 70% of the basket. Daily lifecycle is separate from intraday rotation.')
+        dark_frame(themes[['Theme','Today %','Today vs SPY pp','Session members','Session coverage','Above VWAP','Lifecycle','RS 5D pp','RS 21D pp','Members']])
+
+
+def record_follow(plan):
+    follow_plan(st.session_state.following,plan)
+    item=plan.to_dict() if hasattr(plan,'to_dict') else plan
+    st.session_state.journal.append({'at':NOW().isoformat(),'event':'SETUP_FOLLOWED','id':item['id'],'symbol':item['symbol'],'note':'Observation only; no entry permission'})
+
+
 def render_terminal(snap, side, search):
-    plans=get_plans()
-    shown=[p for p in plans if (side=='All' or p.direction==side) and (not search or search.upper() in p.symbol)]
-    st.markdown('<div class="section-heading">Top 3 right now <span>Ranked from loaded history · triggers require confirmation</span></div>',unsafe_allow_html=True)
+    with st.container(key='stream_controls'):
+        left,middle,right=st.columns([1.1,1.3,.8])
+        view=left.selectbox('Candidate view',['All qualifying','Sector balanced'])
+        plans=(st.session_state.get('all_plans') or get_plans()) if view=='All qualifying' else get_plans()
+        families=['All families']+sorted({p.setup for p in plans})
+        family=middle.selectbox('Setup family',families)
+        limit=right.selectbox('Cards to show',[6,12,24])
+    shown=[p for p in plans if (side=='All' or p.direction==side) and (not search or search.upper() in p.symbol) and (family=='All families' or p.setup==family)]
+    following=st.session_state.following
+    st.markdown(f'<div class="section-heading">Ranked setups <span>{min(limit,len(shown))} shown / {len(shown)} qualifying · {len(following)}/{FOLLOW_LIMIT} followed · {len(st.session_state.frozen)}/{FOCUS_LIMIT} focus slots</span></div>',unsafe_allow_html=True)
     if shown:
-        for col,(index,plan) in zip(st.columns(3),enumerate(shown[:3],1)):
-            with col:
-                st.markdown(opportunity(plan,index,snap['frames']),unsafe_allow_html=True)
-                if st.button('＋ Watch setup',key='watch_'+plan.id,use_container_width=True,
-                    disabled=plan.id in st.session_state.frozen or len(st.session_state.frozen)>=3):
-                    st.session_state.frozen[plan.id]=plan.to_dict()
-                    st.session_state.journal.append({'at':NOW().isoformat(),'event':'PLAN_FROZEN' if plan.status=='ARMED' else 'WATCH_FROZEN',
-                        'id':plan.id,'symbol':plan.symbol,'note':'Frozen from completed market history'})
-                    st.rerun()
+        for offset in range(0,min(limit,len(shown)),3):
+            for col,(index,plan) in zip(st.columns(3),enumerate(shown[offset:offset+3],offset+1)):
+                with col:
+                    st.markdown(opportunity(plan,index,snap['frames']),unsafe_allow_html=True)
+                    if st.button('＋ Follow setup',key='watch_'+plan.id,use_container_width=True,
+                        disabled=plan.id in following or len(following)>=FOLLOW_LIMIT):
+                        record_follow(plan);st.rerun()
     else:
-        st.markdown('<div class="terminal-panel empty">No qualifying setups in the current selection. Market data and entry permission are never assumed.</div>',unsafe_allow_html=True)
-    st.markdown(f'<div class="section-heading">The Watchtower <span>{len(st.session_state.frozen)} / 3 monitored setups · manual trigger checks</span></div>',unsafe_allow_html=True)
+        st.markdown('<div class="terminal-panel empty">No qualifying setups in the current selection. Entry criteria have not been relaxed to manufacture more signals.</div>',unsafe_allow_html=True)
+    st.markdown(f'<div class="section-heading">The Watchtower <span>{len(following)} / {FOLLOW_LIMIT} followed · {len(st.session_state.frozen)} / {FOCUS_LIMIT} focused</span></div>',unsafe_allow_html=True)
     rows=[]
-    for plan in st.session_state.frozen.values():
-        result=st.session_state.live_result.get(plan['id'],{})
-        checked=result.get('checked_at'); fresh=False
+    for plan in following.values():
+        focused=plan['id'] in st.session_state.frozen
+        result=st.session_state.live_result.get(plan['id'],{}) if focused else {}
+        checked=result.get('checked_at');fresh=False
         if checked:
             try:
                 now=NOW();age=(now-datetime.fromisoformat(checked)).total_seconds()
                 fresh=0<=age<=180 and now.weekday()<5 and time(9,30)<=now.time()<time(16,0)
             except (ValueError,TypeError):pass
-        state='OPEN' if plan['id'] in st.session_state.positions else result.get('status','WATCH') if fresh else 'STALE' if result else 'AWAITING CHECK'
-        rows.append({'Symbol':plan['symbol'],'Side':plan['direction'],'Setup':plan['setup'],'State':state,
-            'Trigger':money(plan['trigger']),'Invalidation':money(plan['stop']),'Target':money(plan.get('target')),'Checked':checked or 'Not checked'})
+        state='OPEN' if plan['id'] in st.session_state.positions else result.get('status','WATCH') if fresh else 'STALE' if result else 'AWAITING CHECK' if focused else plan.get('status','WATCH')
+        rows.append({'Symbol':plan['symbol'],'Board':'FOCUS' if focused else 'FOLLOWING','Side':plan['direction'],'Setup':plan['setup'],'State':state,
+            'Trigger':money(plan['trigger']),'Invalidation':money(plan['stop']),'Target':money(plan.get('target')),'As of':plan.get('asof','—')})
     if rows:
         dark_frame(pd.DataFrame(rows))
-        with st.expander('Inspect setup / check trigger / manage position',expanded=True):render_live(snap)
+        chosen=st.selectbox('Manage followed setup',list(following),format_func=lambda k:following[k]['symbol']+' · '+following[k]['setup'])
+        item=following[chosen]
+        one,two,three=st.columns(3)
+        if one.button('Move to focus',disabled=chosen in st.session_state.frozen or len(st.session_state.frozen)>=FOCUS_LIMIT,use_container_width=True):
+            focus_plan(st.session_state.frozen,item)
+            st.session_state.journal.append({'at':NOW().isoformat(),'event':'PLAN_FROZEN','id':chosen,'symbol':item['symbol'],'note':'Promoted from followed setups to three-plan focus'})
+            st.rerun()
+        if two.button('Release focus',disabled=chosen not in st.session_state.frozen or chosen in st.session_state.positions,use_container_width=True):
+            st.session_state.frozen.pop(chosen,None);st.session_state.live_result.pop(chosen,None);st.rerun()
+        if three.button('Unfollow',disabled=chosen in st.session_state.frozen or chosen in st.session_state.positions,use_container_width=True):
+            following.pop(chosen);st.rerun()
+        if st.session_state.frozen:
+            with st.expander('Focused review / trigger checks / position management',expanded=True):render_live(snap)
+        else:st.caption('Following records setups for observation. Move up to three into focus for the existing trigger checks; no entry is implied.')
     else:
-        st.markdown('<div class="terminal-panel empty">No setups monitored. Use <b>＋ Watch setup</b> on a ranked opportunity.<br>Frozen trigger, invalidation and target levels stay fixed until you remove the setup.</div>',unsafe_allow_html=True)
+        st.markdown('<div class="terminal-panel empty">Follow up to 12 setups here. Keep up to three in focus for detailed entry review.</div>',unsafe_allow_html=True)
     with st.expander(f'All candidates · {len(shown)}'):
         dark_frame(plans_frame(shown))
         if shown:
             index=st.selectbox('Select candidate',range(len(shown)),format_func=lambda i:shown[i].symbol+' · '+shown[i].setup)
             plan=shown[index]
-            if st.button('Watch selected setup',disabled=plan.id in st.session_state.frozen or len(st.session_state.frozen)>=3):
-                st.session_state.frozen[plan.id]=plan.to_dict()
-                st.session_state.journal.append({'at':NOW().isoformat(),'event':'WATCH_FROZEN','id':plan.id,'symbol':plan.symbol,'note':'Frozen research candidate'})
-                st.rerun()
+            if st.button('Follow selected setup',disabled=plan.id in following or len(following)>=FOLLOW_LIMIT):
+                record_follow(plan);st.rerun()
     with st.expander('TradingView stock quotes / comparison'):
         st.caption('Public screener snapshot, separate from your connected TradingView account. Some stocks are 15 minutes delayed; ETF coverage was unavailable in testing. These quotes never authorize entries.')
         if st.button('Fetch TradingView quotes'):
@@ -539,15 +594,17 @@ def main():
     st.markdown(header(st.session_state.last_refresh),unsafe_allow_html=True)
     snap=st.session_state.market_snapshot
     render_intraday_context()
-    controls=st.columns([1.2,1,1,1,1.4])
-    breadth=controls[0].selectbox('Stock universe',['Balanced 60','Balanced 120','Full 574'])
-    side=controls[1].selectbox('Show',['All','LONG','SHORT'],format_func=lambda x:{'All':'All setups','LONG':'▲ Bullish','SHORT':'▼ Bearish'}[x])
-    search=controls[2].text_input('Symbol filter',placeholder='Ticker…')
-    controls[3].markdown('<div style="height:23px"></div>',unsafe_allow_html=True)
-    refresh=controls[3].button('↻ Scan now',type='primary',use_container_width=True)
-    updated=st.session_state.last_refresh
-    pins=controls[4].text_input('My list',value=st.session_state.pins,placeholder='Tickers, comma separated')
-    st.session_state.pins=pins
+    with st.container(key='scan_toolbar'):
+        st.markdown('<div class="toolbar-heading"><b>SCAN CONTROLS</b><span>Same universe · more setups to follow</span></div>',unsafe_allow_html=True)
+        controls=st.columns([1.1,.9,1,1.35,.9],vertical_alignment='bottom')
+        breadth=controls[0].selectbox('Universe',['Balanced 60','Balanced 120','Full 574'])
+        side=controls[1].selectbox('Direction',['All','LONG','SHORT'],format_func=lambda x:{'All':'All directions','LONG':'▲ Bullish','SHORT':'▼ Bearish'}[x])
+        search=controls[2].text_input('Find a setup',placeholder='Ticker…')
+        pins=controls[3].text_input('My list',value=st.session_state.pins,placeholder='Tickers, comma separated')
+        refresh=controls[4].button('↻ Scan universe',type='primary',use_container_width=True)
+        st.session_state.pins=pins
+        updated=st.session_state.last_refresh
+        st.markdown(f'<div class="toolbar-footer"><span>{snap.get("loaded",0)} histories loaded</span><span>{len(st.session_state.get("all_plans") or get_plans())} qualifying setups</span><span>Last scan {e(updated[11:19]+" ET" if updated else "not run")}</span></div>',unsafe_allow_html=True)
     with st.expander('Data connection / coverage'):
         st.caption('Sector Today % compares completed 5-minute regular-session bars with the previous close. Vs SPY is session relative strength in percentage points. VWAP uses this regular session only. Context refreshes every 60 seconds; stale/closed sessions are labelled. Daily setup rankings and entry checks remain separate.')
         st.caption(f'Last refresh: {updated or "Awaiting provider"} · {snap.get("loaded",0)} histories loaded')

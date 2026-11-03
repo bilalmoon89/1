@@ -34,7 +34,7 @@ def panel(title, body, meta=''):
     return f'<section class="terminal-panel"><div class="panel-head"><b><span class="grip">⠿</span> {e(title)}</b><span>{e(meta)}</span></div><div class="panel-body">{body}</div></section>'
 
 def header(updated=None):
-    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● Yahoo Finance</span><span>5m intraday · provider delay</span><span class="build-pill">CTT 7.3</span></div></div>'
+    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● Yahoo Finance</span><span>5m intraday · provider delay</span><span class="build-pill">CTT 7.4</span></div></div>'
 
 def overview(snap, plans, frozen, intraday=None):
     intraday=intraday or {}
@@ -130,5 +130,14 @@ h3{font-size:15px!important;padding:5px 0!important}p{font-size:12px;line-height
 [data-testid="stWidgetLabel"] p{font-size:12px!important}input,[data-baseweb="select"]>div{font-size:14px!important}[data-testid="stButton"] button{min-height:40px!important;font-size:13px!important}.stButton p{font-size:13px!important}[data-testid="stExpander"] summary p{font-size:13px!important}[data-testid="stCaptionContainer"] p{font-size:12px!important}
 @media(min-width:1101px) and (max-width:1500px){.context-grid{grid-template-columns:1.35fr 1fr}.panel-body{height:280px}}
 @media(max-width:680px){.terminal-header{flex-wrap:wrap}.terminal-brand strong{font-size:18px}.terminal-brand small{font-size:10px;letter-spacing:.04em}.header-meta{display:flex;flex-wrap:wrap;font-size:11px}.terminal-brand em{font-size:10px}.terminal-header .moon{font-size:30px}.regime-strip{flex-direction:column}.regime-strip b{font-size:13px}.regime-strip small{font-size:12px}.regime-strip>.pill{font-size:10px}.quote{padding:12px 9px;flex-wrap:wrap;gap:5px}.quote strong{font-size:20px}.quote b{font-size:12px}.quote-change{font-size:12px}.spark{max-width:100%;width:100%;height:30px}.panel-body{height:auto;max-height:380px;min-height:0}.terminal-table{font-size:12px!important}.terminal-table th{font-size:10px;white-space:normal}.terminal-table td{padding:9px 5px}.terminal-table td:first-child{max-width:120px}.section-heading{align-items:flex-start;gap:8px;flex-direction:column}.opportunity{min-height:0}.op-head{flex-wrap:wrap}.level-grid b{font-size:15px}[data-testid="stButton"] button{min-height:44px!important}input{font-size:16px!important}}
+
+.st-key-scan_toolbar{background:#101923;border:1px solid #314052;border-radius:8px;padding:15px!important;margin:10px 0!important}
+.toolbar-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:10px;border-bottom:1px solid #283544;margin-bottom:4px;font-size:12px;letter-spacing:.06em;color:#dce6f3}.toolbar-heading span{font-size:11px;letter-spacing:0;color:#9bacc0}
+.toolbar-footer{display:flex;flex-wrap:wrap;gap:18px;color:#92a7bd;font-size:11px;padding-top:8px}
+.st-key-scan_toolbar [data-testid="stButton"] button{min-height:42px!important}.st-key-scan_toolbar input,.st-key-scan_toolbar [data-baseweb="select"]>div{min-height:42px!important}
+.st-key-stream_controls{background:#0e1721;border:1px solid #243243;border-radius:6px;padding:10px!important;margin-top:10px}
+.theme-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.theme-tile{padding:13px;background:#101c27;border:1px solid #2b3d4d;border-radius:6px;border-top:2px solid #617e8c;min-width:0}.theme-title{font-size:13px;font-weight:700;color:#dce8f5;line-height:1.4;min-height:20px}.theme-reading{font:700 20px monospace;margin:10px 0}.theme-reading small{font:11px Arial;color:#a2b3c7;display:block;margin-top:5px}.theme-meta{display:flex;justify-content:space-between;gap:7px;font-size:11px;color:#bac9d9;border-top:1px solid #2b3948;padding-top:8px}.theme-meta span:last-child{color:#d6bd82}
+@media(max-width:900px){.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.st-key-scan_toolbar{padding:12px!important}.toolbar-heading{align-items:flex-start;flex-direction:column}.toolbar-footer{gap:8px;flex-direction:column}.theme-grid{grid-template-columns:1fr}.theme-reading{font-size:22px}.theme-title{font-size:15px}.st-key-scan_toolbar [data-testid="stButton"] button{min-height:46px!important}}
 </style>
 '''
