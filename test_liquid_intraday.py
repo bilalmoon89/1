@@ -65,3 +65,17 @@ def test_unknown_industry_from_quote_remains_excluded():
     for industry in (None,float('nan')):
         included,excluded=apply_exclusions(rows,{'TEST':{'industry':industry}})
         assert included.empty and 'unverified' in excluded.iloc[0]['Exclusion']
+
+
+def test_leader_columns_theme_and_short_et_times():
+    from liquid_table import leaders_frame
+    original=pd.DataFrame([{'Symbol':'CRWD','RVOL':1.5,'Avg volume 20D':2_000_000,
+        'Industry':'Software','Quote ET':'2026-11-04T20:43:09+00:00',
+        'Retrieved ET':'2026-11-04T15:43:43-05:00','Baseline through':'2026-11-03'}])
+    display=leaders_frame(original)
+    assert display.columns[:5].tolist()==['Symbol','RVOL','Industry','Theme','Avg volume 20D']
+    assert display.iloc[0]['Theme']=='Cybersecurity'
+    assert display.iloc[0]['Quote ET']=='15:43:09'
+    assert display.iloc[0]['Retrieved ET']=='15:43:43'
+    assert 'Baseline through' not in display
+    assert 'Baseline through' in original

@@ -103,10 +103,18 @@ def test_liquid_intraday_default_and_custom_tickers(monkeypatch):
     st.cache_data.clear()
     monkeypatch.setattr(liquid_app,'universe',lambda scope:['AAPL'])
     calls=[]
+    schedules=[]
+    original_fragment=st.fragment
+    def fragment(**kwargs):
+        schedules.append(kwargs.get('run_every'))
+        return original_fragment(**kwargs)
+    monkeypatch.setattr(st,'fragment',fragment)
+    quote_calls=[]
     def load(symbols):
         calls.append(symbols)
         return {s:history() for s in symbols},{}
     def quotes(symbols):
+        quote_calls.append(symbols)
         now=datetime.now(ZoneInfo('America/New_York'))
         q=quote(time=now.replace(hour=9,minute=30).timestamp(),last_bar_update_time=now.timestamp(),industry='Technology')
         return {s:q for s in symbols}
@@ -120,4 +128,10 @@ def test_liquid_intraday_default_and_custom_tickers(monkeypatch):
     next(x for x in app.button if x.label=='Run Liquid Uptrend').click().run()
     assert not app.exception
     assert calls==[('AAPL','COHR','LITE')]
+    assert '2s' in schedules and schedules[-1] is None
+    assert len(quote_calls)==1
+    app.run()
+    assert schedules[-1] is None and len(quote_calls)==1
+    next(x for x in app.button if x.label=='Refresh quotes').click().run()
+    assert len(quote_calls)==2 and schedules[-1] is None
     assert any('Today %' in x.value and '15 min delayed' in x.value and '#55e1a5' in x.value for x in app.markdown)

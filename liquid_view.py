@@ -4,7 +4,7 @@ import streamlit as st
 from crescent_engine import complete_daily
 from liquid_uptrend import LiquidFilters, screen_history, screen_intraday, apply_exclusions
 from terminal_view import table, e
-from liquid_table import leaders_table
+from liquid_table import leaders_table, leaders_frame
 
 
 DEFAULTS={'lu_volume':1_000_000.0,'lu_dollar':100_000_000.0,'lu_200':.01,'lu_50':.01,'lu_adr1':3.0,'lu_adr20':3.0,
@@ -53,11 +53,17 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now,quote_lo
         except Exception as exc:
             st.error(f'Could not load the universe: {str(exc)[:160]}');return
         st.session_state.liquid_job={'scope':scope,'symbols':symbols,'done':0,'history':{},'failures':{},'active':True,'quotes':{},'quote_error':'','quote_refresh':0,'custom':custom}
-    scan_results(daily_loader,industry_loader,scope,now,
+    job=st.session_state.get('liquid_job')
+    if job and quote_loader and mode.startswith('Intraday'):
+        if st.button('Refresh quotes',disabled=bool(job.get('active'))):
+            if hasattr(quote_loader,'clear'):quote_loader.clear()
+            job['quote_refresh']=0
+    st.caption('Quote ET and Retrieved ET show Eastern Time. After the scan finishes, the table stays still; use Refresh quotes to update it.')
+    polling=bool(job and job.get('active') and job.get('scope')==scope and job.get('custom','')==custom)
+    st.fragment(run_every='2s' if polling else None)(scan_results)(daily_loader,industry_loader,scope,now,
         LiquidFilters(volume,dollar,sma200,sma50,adr1,adr20),exclude_pharma,excluded,keywords,mode,quote_loader,custom)
 
 
-@st.fragment(run_every='2s')
 def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,excluded,keywords,mode,quote_loader,custom):
     import time
     from datetime import datetime
@@ -73,7 +79,9 @@ def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,e
         except Exception as exc:job['quote_error']=f'TradingView unavailable: {str(exc)[:160]}'
     if job and job.get('quote_error'):st.warning(job['quote_error'])
     if job and job['active']:
-        if st.button('Stop scan',key='liquid_stop'):job['active']=False
+        if st.button('Stop scan',key='liquid_stop'):
+            job['active']=False
+            st.rerun()
         else:
             batch=tuple(job['symbols'][job['done']:job['done']+12])
             with st.spinner(f"Checking stocks {job['done']+1}–{job['done']+len(batch)}…"):
@@ -89,6 +97,7 @@ def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,e
                     st.session_state.liquid_scope=scope
                     st.session_state.liquid_failures=job['failures']
                     st.session_state.liquid_updated=now.isoformat(timespec='seconds')
+                st.rerun()
         st.progress(job['done']/max(1,len(job['symbols'])),text=f"{job['done']} / {len(job['symbols'])} stocks checked · {len(job['history'])} available")
     if job and job['scope']==scope and job['failures']:
         st.warning(f"{len(job['failures'])} histories unavailable. Coverage is incomplete; unavailable stocks are not treated as failed setups.")
@@ -110,8 +119,9 @@ def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,e
     st.markdown(f'<div class="section-heading">Liquid leaders <span>{len(result)} matches · {len(history)} stock histories · {e(scope)} · {e(st.session_state.get("liquid_updated",""))}</span></div>',unsafe_allow_html=True)
     if result.empty:st.info('No verified stocks pass every selected condition in the available data. Check data coverage below for missing or stale quotes. The preset has not been relaxed.')
     else:
-        st.markdown(leaders_table(result),unsafe_allow_html=True)
-        st.download_button('Export liquid matches CSV',result.to_csv(index=False),file_name='Crescent_Liquid_Uptrend.csv',mime='text/csv')
+        display=leaders_frame(result)
+        st.markdown(leaders_table(display),unsafe_allow_html=True)
+        st.download_button('Export liquid matches CSV',display.to_csv(index=False),file_name='Crescent_Liquid_Uptrend.csv',mime='text/csv')
     if not excluded_rows.empty:
         with st.expander(f'Excluded after technical checks · {len(excluded_rows)}'):
             st.markdown(table(excluded_rows),unsafe_allow_html=True)

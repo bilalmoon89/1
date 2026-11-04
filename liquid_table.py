@@ -1,6 +1,34 @@
 """Color-coded, escaped presentation for daily and intraday liquid leaders."""
 from html import escape
 import math
+import pandas as pd
+from rotation_themes import THEMES
+
+
+def leaders_frame(frame):
+    result=frame.drop(columns=['Baseline through'],errors='ignore').copy()
+    if 'Industry' not in result:result['Industry']='Unverified'
+    memberships={}
+    for theme in THEMES:
+        for symbol in theme['symbols']:
+            memberships.setdefault(symbol,[]).append(theme['name'])
+    result['Theme']=result['Symbol'].map(lambda s:' · '.join(memberships.get(s,[])) or 'Unmapped')
+    columns=[c for c in result.columns if c not in ('Industry','Theme')]
+    anchor='RVOL' if 'RVOL' in columns else 'Close' if 'Close' in columns else 'Symbol'
+    at=columns.index(anchor)+1
+    columns[at:at]=['Industry','Theme']
+    for column in ('Quote ET','Retrieved ET'):
+        if column in result:
+            def short_time(value):
+                try:
+                    stamp=pd.Timestamp(value)
+                    if pd.isna(stamp):return '—'
+                    if stamp.tzinfo is not None:stamp=stamp.tz_convert('America/New_York')
+                    return stamp.strftime('%H:%M:%S')
+                except (ValueError,TypeError):return '—'
+            result[column]=result[column].map(short_time)
+    return result[columns]
+
 
 
 def leaders_table(frame):
