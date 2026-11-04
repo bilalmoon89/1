@@ -54,7 +54,7 @@ def cached_tv_quotes(symbols):
 
 @st.cache_data(ttl=86400,show_spinner=False)
 def cached_industries(symbols):
-    return fetch_industries(symbols)
+    return fetch_industries(tuple(symbols))
 
 
 @st.fragment(run_every='60s')

@@ -32,3 +32,27 @@ def test_incomplete_volume_is_not_accepted_as_a_full_average():
     f=history();f.iloc[-1,f.columns.get_loc('Volume')]=float('nan')
     result,missing=screen_history({'TEST':f})
     assert result.empty and 'volume' in missing['TEST']
+
+
+def test_tradingview_classification_fallback_preserves_pharma_exclusion(monkeypatch):
+    import yfinance
+    import tradingview_screener
+    from liquid_uptrend import fetch_industries
+    class MissingYahoo:
+        def __init__(self,*args):pass
+        def get_info(self):raise RuntimeError('Provider unavailable')
+    class AvailableTradingView:
+        def set_markets(self,*args):return self
+        def select(self,*args):return self
+        def where(self,*args):return self
+        def limit(self,*args):return self
+        def get_scanner_data(self,**kwargs):
+            return 2,pd.DataFrame([{'name':'MPC','industry':'Oil Refining/Marketing'},{'name':'BIO','industry':'Biotechnology'}])
+    monkeypatch.setattr(yfinance,'Ticker',MissingYahoo)
+    monkeypatch.setattr(tradingview_screener,'Query',AvailableTradingView)
+    industries=fetch_industries(('MPC','BIO'))
+    matches,_=screen_history({'MPC':history(),'BIO':history()})
+    included,excluded=apply_exclusions(matches,industries)
+    assert included.Symbol.tolist()==['MPC']
+    assert excluded.Symbol.tolist()==['BIO']
+    assert included.iloc[0]['Classification source']=='TradingView'

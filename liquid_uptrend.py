@@ -51,9 +51,21 @@ def fetch_industries(symbols):
     def one(symbol):
         try:
             info=yf.Ticker(symbol).get_info()
-            return symbol,{'industry':info.get('industry',''),'key':info.get('industryKey','')}
+            return symbol,{'industry':info.get('industry',''),'key':info.get('industryKey',''),'source':'Yahoo Finance'}
         except Exception:return symbol,{'industry':'','key':''}
-    with ThreadPoolExecutor(max_workers=4) as pool:return dict(pool.map(one,symbols))
+    with ThreadPoolExecutor(max_workers=4) as pool:result=dict(pool.map(one,symbols))
+    missing=[s for s in symbols if not result[s].get('industry') and not result[s].get('key')]
+    if missing:
+        try:
+            from tradingview_screener import Query,col
+            _,rows=(Query().set_markets('america').select('name','industry')
+                .where(col('name').isin(missing)).limit(100).get_scanner_data(timeout=12))
+            for _,row in rows.iterrows():
+                industry=row['industry'] if isinstance(row['industry'],str) else ''
+                if row['name'] in missing and industry:
+                    result[row['name']]={'industry':industry,'key':'','source':'TradingView'}
+        except Exception:pass
+    return result
 
 
 def apply_exclusions(frame,industries,exclude_pharma=True,tickers=(),keywords=()):
@@ -62,6 +74,7 @@ def apply_exclusions(frame,industries,exclude_pharma=True,tickers=(),keywords=()
         item=row.to_dict();meta=industries.get(item['Symbol'],{})
         industry=str(meta.get('industry',''));key=str(meta.get('key','')).lower()
         item['Industry']=industry or 'Unverified'
+        item['Classification source']=meta.get('source','Supplied') if industry else 'Unavailable'
         reason=None
         if item['Symbol'] in set(tickers):reason='Excluded ticker'
         elif exclude_pharma and not industry and not key:reason='Industry unverified under the default exclusion'

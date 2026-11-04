@@ -39,7 +39,7 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now):
         one,two=st.columns(2)
         excluded=one.text_input('Exclude tickers',placeholder='e.g. ABC, XYZ',key='lu_excluded_tickers')
         keywords=two.text_input('Exclude other industries · keywords',placeholder='e.g. banks, insurance',key='lu_excluded_industries')
-        st.caption('Dollar volume = mean(close × volume) over 50 sessions. ADR N = (mean high N − mean low N) ÷ latest close × 100. Pharma exclusion uses Yahoo industry classification, including diagnostics/research; unverified industries are held out while this exclusion is enabled.')
+        st.caption('Dollar volume = mean(close × volume) over 50 sessions. ADR N = (mean high N − mean low N) ÷ latest close × 100. Industry classification uses Yahoo with TradingView fallback, including diagnostics/research where identified; unverified industries are held out while this exclusion is enabled.')
     run=st.button('Run Liquid Uptrend',type='primary',use_container_width=True)
     initial=not st.session_state.get('liquid_started',False)
     if run or initial:
