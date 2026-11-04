@@ -76,3 +76,49 @@ def apply_exclusions(frame,industries,exclude_pharma=True,tickers=(),keywords=()
         if reason:item['Exclusion']=reason;excluded.append(item)
         else:included.append(item)
     return pd.DataFrame(included),pd.DataFrame(excluded)
+
+
+def screen_intraday(history,quotes,now,filters=None):
+    """Active session ranges and prices; completed-session liquidity baselines."""
+    from datetime import datetime,time
+    from zoneinfo import ZoneInfo
+    filters=filters or LiquidFilters()
+    rows=[];missing={};et=ZoneInfo('America/New_York')
+    now=now.astimezone(et)
+    for symbol,raw in history.items():
+        f=normalise(raw);q=quotes.get(symbol,{})
+        try:
+            stamp=datetime.fromtimestamp(float(q['last_bar_update_time']),et)
+            session=datetime.fromtimestamp(float(q['time']),et)
+            if (now-stamp).total_seconds() < -300:raise ValueError('Quote timestamp is in the future')
+            if session.date()!=now.date() or stamp.date()!=now.date():raise ValueError('No current-session quote')
+            if time(9,30)<=now.time()<time(16) and (now-stamp).total_seconds()>1800:
+                raise ValueError('Intraday quote is stale (over 30 minutes)')
+            f=f[f.index.date<session.date()]
+            if len(f)<200:raise ValueError('200 completed daily bars required')
+            if f.Volume.tail(50).isna().any() or (f.Volume.tail(50)<0).any():raise ValueError('Invalid historical volume')
+            close=float(q['close']);high=float(q['high']);low=float(q['low'])
+            sma200=float(q['SMA200']);sma50=float(q['SMA50'])
+            vol=float(f.Volume.tail(20).mean());dollar=float((f.Close*f.Volume).tail(50).mean())
+            if close<=0 or high<low or sma200<=0 or sma50<=0:raise ValueError('Invalid session prices')
+            above200=(close/sma200-1)*100;above50=(close/sma50-1)*100
+            adr1=(high-low)/close*100
+            adr20=((f.High.tail(19).sum()+high)-(f.Low.tail(19).sum()+low))/20/close*100
+            values=[vol,dollar,above200,above50,adr1,adr20]
+            limits=[filters.volume20,filters.dollar_volume50,filters.above_sma200,filters.above_sma50,filters.adr1,filters.adr20]
+            if not all(finite(x) and x>limit for x,limit in zip(values,limits)):continue
+            vwap=pd.to_numeric(q.get('VWAP'),errors='coerce')
+            mode=str(q.get('update_mode','Unknown'))
+            if mode.startswith('delayed_streaming_'):
+                mode=f"{int(mode.rsplit('_',1)[1])//60} min delayed"
+            rows.append({'Symbol':symbol,'Last':round(close,2),'Today %':q.get('change'),
+                'From open %':q.get('change_from_open'),'Vs VWAP %':(close/vwap-1)*100 if finite(vwap) and vwap>0 else None,
+                'Session volume':q.get('volume'),'RVOL':q.get('relative_volume_10d_calc'),
+                'Avg volume 20D':vol,'Avg $ volume 50D':dollar,'Vs SMA200 %':above200,'Vs SMA50 %':above50,
+                'ADR 1D %':adr1,'ADR 20D %':adr20,'Quote ET':stamp.isoformat(timespec='seconds'),
+                'Feed':mode,'Source':'TradingView','Retrieved ET':q.get('retrieved',''),
+                'Baseline through':str(f.index[-1].date())})
+        except (KeyError,ValueError,TypeError,OverflowError,OSError) as exc:missing[symbol]=str(exc)
+    result=pd.DataFrame(rows)
+    if not result.empty:result=result.sort_values('Today %',ascending=False,na_position='last').reset_index(drop=True)
+    return result,missing

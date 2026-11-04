@@ -2,7 +2,7 @@
 import importlib
 import time
 
-LOCAL_MODULES={'terminal_view','liquid_view','liquid_app','liquid_uptrend','liquid_data',
+LOCAL_MODULES={'terminal_view','liquid_view','liquid_app','liquid_uptrend','liquid_data','liquid_table',
     'crescent_engine','crescent_feeds','intraday_context','market_symbols','theme_rotation','watchtower'}
 
 

@@ -39,7 +39,7 @@ Related themes are selected when at least two members occur in the loaded univer
 
 ## Liquid Uptrend preset
 
-Open `?view=liquid` from the highlighted header link. All six numerical checks must pass, using completed daily bars:
+Open `?view=liquid` from the highlighted header link. All six numerical checks must pass. Intraday (default) uses TradingView session price, daily SMA50/SMA200 and active session range, with Yahoo completed-session liquidity baselines. Completed daily mode remains available:
 
 - Average volume over 20 sessions > 1,000,000.
 - Average close × volume over 50 sessions > $100,000,000.
@@ -59,3 +59,8 @@ python -m pytest -q
 Deploy only this repository to its separate test Streamlit application using `app.py`. Do not replace the production scanner deployment.
 
 Liquid Uptrend opens without provider requests. Run explicitly to process 12 stocks per batch with progress and a stop control. Daily requests have a 12-second outer deadline; classification has an 8-second deadline. Failed daily requests are retried on the next explicit scan, and a wholly failed refresh retains the last successful results. Partial coverage is displayed.
+
+
+Liquid Leaders intraday view refreshes TradingView snapshots every 60 seconds (provider feed delays still apply). It shows today %, from-open %, distance from VWAP, session volume, relative volume, quote/bar update time, feed mode, and retrieval time in a colored, horizontally scrollable table. Quotes from a previous session, future timestamps, and quotes older than 30 minutes during regular hours are held out. Missing quotes never fall back silently to yesterday's close. Historical 20D volume and 50D dollar volume stay based on completed sessions; intraday ADR20 combines 19 completed daily ranges with the active session range.
+
+The default universe is now the full 574-stock list. A TradingView US discovery option scans up to 1,500 primary stocks above SMA50/SMA200, ranked by 90D average volume. This is a capped discovery selection, not all US listings. Additional tickers can be appended to either universe. Every ticker still passes all exact technical/liquidity conditions and exclusions. Partial results appear while bounded 12-stock batches load; successful historical batches are cached for 20 minutes and failed batches remain retryable. This public screener adapter does not inherit the user's authenticated TradingView market-data entitlements.

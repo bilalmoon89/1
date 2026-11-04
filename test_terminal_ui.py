@@ -66,6 +66,7 @@ def test_liquid_page_uses_standard_filters_and_real_feed_adapter(monkeypatch):
     assert len(app.number_input)==6
     assert next(x for x in app.checkbox if x.label.startswith('Exclude Pharmaceuticals')).value
     assert not calls
+    next(x for x in app.radio if x.label=='Data view').set_value('Completed daily').run()
     next(x for x in app.button if x.label=='Run Liquid Uptrend').click().run()
     assert not app.exception
     assert calls==[('AAPL',)]
@@ -82,11 +83,41 @@ def test_liquid_failed_refresh_retains_last_good_results(monkeypatch):
     app=AppTest.from_file('app.py',default_timeout=30)
     app.query_params['view']='liquid'
     app.run()
+    next(x for x in app.radio if x.label=='Data view').set_value('Completed daily').run()
     next(x for x in app.button if x.label=='Run Liquid Uptrend').click().run()
     stamp=app.session_state['liquid_updated']
+    liquid_app.successful_daily_batch.clear()
     monkeypatch.setattr(liquid_data,'fetch_batch',lambda symbols:({}, {'AAPL':'Timeout'}))
     next(x for x in app.button if x.label=='Run Liquid Uptrend').click().run()
     assert not app.exception
     assert app.session_state['liquid_updated']==stamp
     assert 'AAPL' in app.session_state['liquid_history']
     assert any('retained' in x.value for x in app.error)
+
+def test_liquid_intraday_default_and_custom_tickers(monkeypatch):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from test_liquid_uptrend import history
+    from test_liquid_intraday import quote
+    import liquid_app,liquid_data
+    st.cache_data.clear()
+    monkeypatch.setattr(liquid_app,'universe',lambda scope:['AAPL'])
+    calls=[]
+    def load(symbols):
+        calls.append(symbols)
+        return {s:history() for s in symbols},{}
+    def quotes(symbols):
+        now=datetime.now(ZoneInfo('America/New_York'))
+        q=quote(time=now.replace(hour=9,minute=30).timestamp(),last_bar_update_time=now.timestamp(),industry='Technology')
+        return {s:q for s in symbols}
+    monkeypatch.setattr(liquid_data,'fetch_batch',load)
+    monkeypatch.setattr(liquid_data,'fetch_session_quotes',quotes)
+    app=AppTest.from_file('app.py',default_timeout=30)
+    app.query_params['view']='liquid';app.run()
+    assert app.selectbox[0].value=='Full 574'
+    assert app.radio[0].value.startswith('Intraday')
+    next(x for x in app.text_input if x.label=='Additional tickers').set_value('COHR, AAPL, LITE').run()
+    next(x for x in app.button if x.label=='Run Liquid Uptrend').click().run()
+    assert not app.exception
+    assert calls==[('AAPL','COHR','LITE')]
+    assert any('Today %' in x.value and '15 min delayed' in x.value and '#55e1a5' in x.value for x in app.markdown)

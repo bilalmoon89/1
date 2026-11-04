@@ -36,3 +36,37 @@ def fetch_classification(symbols):
     from liquid_uptrend import fetch_industries
     try:return bounded_call(fetch_industries,tuple(symbols),timeout=8)
     except Exception:return {s:{'industry':'','key':'','source':'Unavailable'} for s in symbols}
+
+
+def _session_quotes(symbols):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from tradingview_screener import Query,col
+    fields=('name','exchange','close','high','low','volume','change','change_from_open',
+        'VWAP','relative_volume_10d_calc','SMA50','SMA200','time','last_bar_update_time','update_mode','industry')
+    _,frame=(Query().set_markets('america').select(*fields)
+        .where(col('name').isin(list(symbols))).limit(len(symbols)*2).get_scanner_data(timeout=8))
+    retrieved=datetime.now(ZoneInfo('America/New_York')).isoformat(timespec='seconds')
+    result={}
+    for _,row in frame.iterrows():
+        symbol=row['name']
+        if symbol in symbols and symbol not in result:
+            item=row.to_dict();item['retrieved']=retrieved;result[symbol]=item
+    return result
+
+
+def fetch_session_quotes(symbols):
+    return bounded_call(_session_quotes,tuple(symbols),timeout=12)
+
+
+def _discover_symbols():
+    from tradingview_screener import Query,col
+    _,frame=(Query().set_markets('america').select('name')
+        .where(col('type')=='stock',col('is_primary')==True,
+            col('close')>col('SMA50'),col('close')>col('SMA200'))
+        .order_by('average_volume_90d_calc',ascending=False).limit(1500).get_scanner_data(timeout=8))
+    return list(dict.fromkeys(frame['name'].dropna().astype(str)))
+
+
+def discover_symbols():
+    return bounded_call(_discover_symbols,timeout=12)

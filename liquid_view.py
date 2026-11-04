@@ -2,8 +2,9 @@
 import pandas as pd
 import streamlit as st
 from crescent_engine import complete_daily
-from liquid_uptrend import LiquidFilters, screen_history, apply_exclusions
+from liquid_uptrend import LiquidFilters, screen_history, screen_intraday, apply_exclusions
 from terminal_view import table, e
+from liquid_table import leaders_table
 
 
 DEFAULTS={'lu_volume':1_000_000.0,'lu_dollar':100_000_000.0,'lu_200':.01,'lu_50':.01,'lu_adr1':3.0,'lu_adr20':3.0,
@@ -14,8 +15,8 @@ def reset_preset():
     st.session_state.update(DEFAULTS)
 
 
-def render_liquid_page(daily_loader,industry_loader,universe_loader,now):
-    st.markdown('<div class="section-heading">Liquid Uptrend <span>Completed daily candles · ALL conditions must pass</span></div>',unsafe_allow_html=True)
+def render_liquid_page(daily_loader,industry_loader,universe_loader,now,quote_loader=None):
+    st.markdown('<div class="section-heading">Liquid Uptrend <span>Session prices + historical liquidity · ALL conditions must pass</span></div>',unsafe_allow_html=True)
     standard=all(st.session_state.get(key,value)==value for key,value in DEFAULTS.items())
     badge='STANDARD PRESET' if standard else 'CUSTOM FILTERS'
     summary='20D volume &gt; 1M · 50D dollar volume &gt; $100M · above SMA200 and SMA50 · ADR 1D and 20D &gt; 3%' if standard else 'All six technical checks and selected exclusions apply. Restore the standard preset to reset.'
@@ -23,9 +24,13 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now):
     for key,value in DEFAULTS.items():
         if key not in st.session_state:st.session_state[key]=value
     left,right=st.columns([3,1],vertical_alignment='bottom')
-    scope=left.selectbox('Liquid scan universe',['Balanced 60','Balanced 120','Full 574'],key='lu_scope')
+    scope=left.selectbox('Liquid scan universe',['Full 574','TradingView US · top 1,500','Balanced 120','Balanced 60'],key='lu_scope')
+    mode=st.radio('Data view',['Intraday · TradingView','Completed daily'],horizontal=True,key='lu_mode')
+    custom=st.text_input('Additional tickers',placeholder='Add symbols beyond the stock list, e.g. COHR, LITE, IONQ',key='lu_extra')
+    st.caption('Intraday: session price, range, SMA and VWAP from TradingView; 20D volume and 50D dollar volume remain completed-session averages. Feed delay and quote time are shown. After the close, the current regular-session snapshot is shown; before the open or on non-trading days, previous-session quotes are held out. Custom tickers also pass every standard filter.')
+    if scope.startswith('TradingView US'):st.caption('US primary stocks above SMA50 and SMA200, ranked by 90D average volume; discovery is capped at 1,500. Exact liquidity, ADR and exclusions are checked afterward. A first scan can take several minutes; partial matches appear while it runs.')
     right.button('Restore standard preset',on_click=reset_preset,use_container_width=True)
-    with st.expander('Filters / exclusions · standard preset',expanded=True):
+    with st.expander('Filters / exclusions · standard preset',expanded=False):
         first=st.columns(3)
         volume=first[0].number_input('Average volume 20D >',min_value=0.0,step=100_000.0,key='lu_volume',format='%.0f')
         dollar=first[1].number_input('Average $ volume 50D >',min_value=0.0,step=10_000_000.0,key='lu_dollar',format='%.0f')
@@ -41,16 +46,32 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now):
         st.caption('Dollar volume = mean(close × volume) over 50 sessions. ADR N = (mean high N − mean low N) ÷ latest close × 100. Industry classification uses a bounded TradingView request, including diagnostics/research where identified; unverified industries are held out while this exclusion is enabled.')
     run=st.button('Run Liquid Uptrend',type='primary',use_container_width=True)
     if run:
-        symbols=list(dict.fromkeys(universe_loader(scope)))
-        st.session_state.liquid_job={'scope':scope,'symbols':symbols,'done':0,'history':{},'failures':{},'active':True}
+        import re
+        extras=[x.upper() for x in re.split(r'[\s,;]+',custom.strip()) if re.fullmatch(r'[A-Za-z][A-Za-z0-9.\-]{0,14}',x)]
+        try:
+            with st.spinner('Loading stock universe…'):symbols=list(dict.fromkeys(list(universe_loader(scope))+extras))
+        except Exception as exc:
+            st.error(f'Could not load the universe: {str(exc)[:160]}');return
+        st.session_state.liquid_job={'scope':scope,'symbols':symbols,'done':0,'history':{},'failures':{},'active':True,'quotes':{},'quote_error':'','quote_refresh':0,'custom':custom}
     scan_results(daily_loader,industry_loader,scope,now,
-        LiquidFilters(volume,dollar,sma200,sma50,adr1,adr20),exclude_pharma,excluded,keywords)
+        LiquidFilters(volume,dollar,sma200,sma50,adr1,adr20),exclude_pharma,excluded,keywords,mode,quote_loader,custom)
 
 
 @st.fragment(run_every='2s')
-def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,excluded,keywords):
+def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,excluded,keywords,mode,quote_loader,custom):
+    import time
+    from datetime import datetime
+    now=datetime.now(now.tzinfo)
     job=st.session_state.get('liquid_job')
-    if job and job['scope']!=scope:job['active']=False
+    if job and (job['scope']!=scope or job.get('custom','')!=custom):job['active']=False
+    intraday=mode.startswith('Intraday')
+    if job and job['scope']==scope and intraday and quote_loader and time.monotonic()-job.get('quote_refresh',0)>=60:
+        job['quote_refresh']=time.monotonic()
+        try:
+            job['quotes']=quote_loader(tuple(job['symbols']))
+            job['quote_error']=''
+        except Exception as exc:job['quote_error']=f'TradingView unavailable: {str(exc)[:160]}'
+    if job and job.get('quote_error'):st.warning(job['quote_error'])
     if job and job['active']:
         if st.button('Stop scan',key='liquid_stop'):job['active']=False
         else:
@@ -74,23 +95,22 @@ def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,e
     if job and not job['active'] and not job['history']:
         st.error('The scan received no usable histories. Retry the scan; the last successful results have been retained.')
     history=st.session_state.get('liquid_history',{})
-    if st.session_state.get('liquid_scope')!=scope:
+    partial=bool(job and job['scope']==scope and job['active'] and job['history'])
+    if partial:history=job['history']
+    if st.session_state.get('liquid_scope')!=scope and not partial:
         st.info('Select Run Liquid Uptrend to scan. The page loads without waiting for market-data connections. Results appear when the scan completes.');return
-    if job and job['active']:st.caption('Scan in progress. Showing the last completed results below.')
-    matches,unavailable=screen_history(history,filters)
+    if partial:st.caption('Scan in progress · partial results below. More stocks will appear as batches finish.')
+    matches,unavailable=screen_intraday(history,job.get('quotes',{}) if job else {},now,filters) if intraday else screen_history(history,filters)
     if not matches.empty:
-        try:industries=industry_loader(tuple(matches.Symbol))
+        try:industries=({s:{'industry':q.get('industry',''),'source':'TradingView'} for s,q in job.get('quotes',{}).items()} if intraday and job else industry_loader(tuple(matches.Symbol)))
         except Exception:industries={}
         result,excluded_rows=apply_exclusions(matches,industries,exclude_pharma,
             [x.strip().upper() for x in excluded.split(',') if x.strip()],keywords.split(','))
     else:result=pd.DataFrame();excluded_rows=pd.DataFrame()
-    st.markdown(f'<div class="section-heading">Liquid uptrends <span>{len(result)} matches · {len(history)} stock histories · {e(scope)} · {e(st.session_state.get("liquid_updated",""))}</span></div>',unsafe_allow_html=True)
-    if result.empty:st.info('No stocks pass every selected condition and exclusion in this universe. The preset has not been relaxed.')
+    st.markdown(f'<div class="section-heading">Liquid leaders <span>{len(result)} matches · {len(history)} stock histories · {e(scope)} · {e(st.session_state.get("liquid_updated",""))}</span></div>',unsafe_allow_html=True)
+    if result.empty:st.info('No verified stocks pass every selected condition in the available data. Check data coverage below for missing or stale quotes. The preset has not been relaxed.')
     else:
-        pretty=result.copy()
-        pretty['Avg volume 20D']=pretty['Avg volume 20D'].map(lambda x:f'{x/1_000_000:.2f}M')
-        pretty['Avg $ volume 50D']=pretty['Avg $ volume 50D'].map(lambda x:f'${x/1_000_000:.1f}M')
-        st.markdown(table(pretty),unsafe_allow_html=True)
+        st.markdown(leaders_table(result),unsafe_allow_html=True)
         st.download_button('Export liquid matches CSV',result.to_csv(index=False),file_name='Crescent_Liquid_Uptrend.csv',mime='text/csv')
     if not excluded_rows.empty:
         with st.expander(f'Excluded after technical checks · {len(excluded_rows)}'):
