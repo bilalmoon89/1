@@ -57,3 +57,11 @@ def test_color_table_escapes_and_colors_both_directions():
     html=leaders_table(pd.DataFrame([{'Symbol':'<script>','Today %':2,'Vs VWAP %':-1,'RVOL':2}]))
     assert '<script>' not in html and '&lt;script&gt;' in html
     assert '#55e1a5' in html and '#ff7b87' in html and '#d7acff' in html
+
+
+def test_unknown_industry_from_quote_remains_excluded():
+    from liquid_uptrend import apply_exclusions
+    rows,_=screen_intraday({'TEST':history()},{'TEST':quote()},NOW)
+    for industry in (None,float('nan')):
+        included,excluded=apply_exclusions(rows,{'TEST':{'industry':industry}})
+        assert included.empty and 'unverified' in excluded.iloc[0]['Exclusion']

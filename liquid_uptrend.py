@@ -64,7 +64,9 @@ def apply_exclusions(frame,industries,exclude_pharma=True,tickers=(),keywords=()
     included=[];excluded=[]
     for _,row in frame.iterrows():
         item=row.to_dict();meta=industries.get(item['Symbol'],{})
-        industry=str(meta.get('industry',''));key=str(meta.get('key','')).lower()
+        raw_industry=meta.get('industry','');raw_key=meta.get('key','')
+        industry=raw_industry if isinstance(raw_industry,str) else ''
+        key=raw_key.lower() if isinstance(raw_key,str) else ''
         item['Industry']=industry or 'Unverified'
         item['Classification source']=meta.get('source','Supplied') if industry else 'Unavailable'
         reason=None
