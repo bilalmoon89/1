@@ -11,6 +11,7 @@ The previous workspace tabs have been replaced by one screen:
 - **The Watchtower**: follow up to 12 setups and promote up to three into focus for trigger checks, focused charts, and manual position management. Following never grants entry permission.
 - **Theme rotation**: intraday return, SPY-relative movement, session VWAP participation and daily lifecycle for observed members of the existing 90 curated baskets. Partial coverage is labelled on every basket.
 - Expandable session journal, JSON backups, event calendar and terminal controls.
+- A highlighted **Liquid Uptrend** header link opens a dedicated scan page with the user's standard ALL preset and editable exclusions.
 
 ## Run
 
@@ -22,7 +23,7 @@ python -m streamlit run app.py
 
 The terminal automatically requests real Yahoo Finance market history on first load. There is no demo mode or generated-price fallback. Use Scan now to refresh or change the balanced universe. Yahoo is best effort and delayed; failed instruments are excluded and listed under Data connection / coverage. Intraday monitoring checks run on request, with no automatic orders.
 
-The market strip and sector panels now use completed **5-minute regular-session bars**, refreshed every 60 seconds: Today %, same-session relative strength versus SPY, and session VWAP. Partial bars and premarket bars are excluded. Missing intraday data stays unavailable; older readings are marked stale or closed. Daily setup ranking and the separate daily backdrop retain the existing calculation rules.
+The market strip shows VIX, SPY, QQQ, IWM, RSP, DIA and TLT. Sector and ETF readings use completed **5-minute regular-session bars**, refreshed every 60 seconds: Today %, same-session relative strength versus SPY, and session VWAP. Partial bars and premarket bars are excluded. VIX uses its own delayed index timestamp, rather than being discarded for failing exact SPY alignment; delayed, stale, closed or last-daily-close readings are labelled explicitly. Daily setup ranking and the separate daily backdrop retain the existing calculation rules.
 
 TradingView stock quote comparison is available in its own expandable panel. Public screener requests returned stock quotes marked 15 minutes delayed in testing, while the tested sector ETFs returned no rows. TradingView quotes do not replace Yahoo candles or authorize entries, and the hosted app does not inherit a ChatGPT TradingView connection or subscription.
 
@@ -34,7 +35,18 @@ The interface follows the supplied TapeReader reference: a compact masthead, mar
 
 The existing calculation engine, feeds, universe files, event checks, three-plan focus limit and live-entry gates are retained. The broader candidate view removes only the presentation cap of two names per sector. Research candidates are never treated as confirmed entries. Session JSON adds an optional `following` field; valid older backups restore into both the followed list and focus list.
 
-Theme intraday requests are limited to already-loaded stocks in baskets with at least two observed members. Definitions alone never cause additional tickers to be added to the selected universe. Themes need at least three members and 70% basket coverage for a broad-coverage label; partial readings are explicitly averages of observed members.
+Related themes are selected when at least two members occur in the loaded universe. The terminal then loads the remaining members of those baskets into a separate theme-history layer. Those extra names improve breadth coverage but do not enter the stock candidate universe automatically. The colourful detail table shows the entire defined member list: green/red chips have session readings, blue chips have daily history only, and dim chips are unavailable. Themes need at least three members and 70% basket coverage for a broad-coverage label; partial readings are explicitly averages of observed members.
+
+## Liquid Uptrend preset
+
+Open `?view=liquid` from the highlighted header link. All six numerical checks must pass, using completed daily bars:
+
+- Average volume over 20 sessions > 1,000,000.
+- Average close × volume over 50 sessions > $100,000,000.
+- Price relative to both SMA200 and SMA50 > 0.01%.
+- ADR over one session and 20 sessions > 3%. ADR N = (mean high N − mean low N) / latest close × 100.
+
+The standard exclusion removes Pharmaceuticals, Biotechnology & Life Sciences using Yahoo industry classification, including drug manufacturers and diagnostics/research. Unverified industries are held out while this exclusion is enabled. The page supports additional ticker/industry-keyword exclusions and a one-click restoration of the standard preset. The selected 60/120/574-stock scope is labelled; this is not a claim of scanning every US listing. Passing this discovery screen does not authorize an entry.
 
 The former Night Plan, Pre-open, Live Desk, Regime & Rotation, and Research screens are no longer navigation destinations. This rework does not add new Air Gap detection rules or data services. Legacy screenshots and release documents are retained under `docs/legacy` for historical reference only.
 

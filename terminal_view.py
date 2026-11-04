@@ -3,6 +3,8 @@ from html import escape
 import math
 import pandas as pd
 from crescent_engine import snapshot, money, SECTORS
+from intraday_context import DISPLAY_BENCHMARKS
+from urllib.parse import quote
 
 def e(value):
     return escape(str(value), quote=True)
@@ -23,6 +25,45 @@ def table(frame):
     rows=''.join('<tr>'+''.join(f'<td>{e("—" if pd.isna(x) else x)}</td>' for x in row)+'</tr>' for row in frame.itertuples(index=False,name=None))
     return f'<div class="table-scroll"><table class="terminal-table"><thead><tr>{heads}</tr></thead><tbody>{rows}</tbody></table></div>'
 
+
+def theme_detail_table(themes):
+    columns=['Theme','Today %','Today vs SPY pp','Session members','Session coverage','Above VWAP','Lifecycle','RS 5D pp','RS 21D pp','Members']
+    numeric={'Today %','Today vs SPY pp','RS 5D pp','RS 21D pp'}
+    rows=[]
+    for _,row in themes.iterrows():
+        cells=[]
+        for column in columns:
+            value=row[column]
+            if column in numeric:
+                unit='%' if column=='Today %' else ''
+                body=f'<span class="signed-value {tone(value)}">{num(value,unit)}</span>'
+            elif column=='Members':
+                chips=[]
+                for item in row.get('Member detail',[]):
+                    symbol=item['symbol'];move=item.get('today')
+                    cls=tone(move) if move is not None else 'member-daily' if item.get('loaded') else 'member-missing'
+                    description=f'{symbol} · {num(move,"%")} today' if move is not None else f'{symbol} · daily history only' if item.get('loaded') else f'{symbol} · history unavailable'
+                    chips.append(f'<a class="member-chip {cls}" title="{e(description)}" href="https://finance.yahoo.com/quote/{quote(symbol,safe="")}/" target="_blank" rel="noopener noreferrer">{e(symbol)}</a>')
+                body='<div class="member-list">'+''.join(chips)+'</div>'
+            elif column=='Session coverage':
+                cls='up' if value=='BROAD' else 'badge-amber' if value=='PARTIAL' else 'muted'
+                body=f'<span class="detail-badge {cls}">{e(value)}</span>'
+            elif column=='Lifecycle':
+                stage=str(value).split('/')[-1].strip()
+                cls={'LEADING':'up','EMERGING':'badge-blue','COOLING':'badge-amber','LAGGING':'down'}.get(stage,'muted')
+                body=f'<span class="detail-badge {cls}">{e(value)}</span>'
+            elif column=='Above VWAP':
+                try:
+                    above,total=[int(x) for x in str(value).split('/')]
+                    cls='up' if total and above/total>=.6 else 'down' if total and above/total<=.4 else 'badge-amber'
+                except ValueError:cls='muted'
+                body=f'<span class="detail-badge {cls}">{e(value)}</span>'
+            else:body=e(value)
+            cells.append(f'<td class="theme-members-cell">{body}</td>' if column=='Members' else f'<td>{body}</td>')
+        rows.append('<tr>'+''.join(cells)+'</tr>')
+    headings=''.join(f'<th>{e(x)}</th>' for x in columns)
+    return '<div class="table-scroll theme-detail-scroll"><table class="terminal-table theme-detail-table"><thead><tr>'+headings+'</tr></thead><tbody>'+''.join(rows)+'</tbody></table></div>'
+
 def spark(frame, color, label="Last 32 completed daily closes"):
     if frame is None or frame.empty:return '<span class="no-series">NO HISTORY</span>'
     values=frame.Close.tail(32).astype(float).tolist()
@@ -34,14 +75,14 @@ def panel(title, body, meta=''):
     return f'<section class="terminal-panel"><div class="panel-head"><b><span class="grip">⠿</span> {e(title)}</b><span>{e(meta)}</span></div><div class="panel-body">{body}</div></section>'
 
 def header(updated=None):
-    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● Yahoo Finance</span><span>5m intraday · provider delay</span><span class="build-pill">CTT 7.4</span></div></div>'
+    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● Yahoo Finance</span><a class="liquid-link" href="?view=liquid" target="_blank" rel="noopener noreferrer">↗ Liquid Uptrend</a><a class="terminal-home" href="?view=terminal" target="_self">Terminal</a><span class="build-pill">BETA · 7.5</span></div></div>'
 
 def overview(snap, plans, frozen, intraday=None):
     intraday=intraday or {}
     intra=intraday.get("rows",pd.DataFrame())
     ctx=snap['context'];frames=snap['frames'];posture=ctx.get('posture','UNKNOWN')
     asof=snap.get('asof') or 'Not loaded'
-    market=intra[intra.Symbol.isin(['SPY','QQQ','IWM'])] if not intra.empty else pd.DataFrame()
+    market=intra[intra.Symbol.isin(['SPY','QQQ','IWM','RSP','DIA'])] if not intra.empty else pd.DataFrame()
     covered=market[market['Vs VWAP %'].notna()] if not market.empty else pd.DataFrame()
     above=int((covered['Vs VWAP %']>0).sum()) if not covered.empty else 0
     state=intraday.get('status','UNAVAILABLE')
@@ -49,17 +90,20 @@ def overview(snap, plans, frozen, intraday=None):
     bar=intraday.get('asof') or 'Unavailable'
     regime=f'<div class="regime-strip"><span class="pill amber">INTRADAY · {e(state)}</span><div><b>{e(description)}</b><small>Completed 5-minute bar · {e(bar)} · Yahoo provider delay · 60-second refresh.</small></div><span class="strip-right">SESSION CONTEXT</span></div>'
     quotes=[]
-    for symbol in ['^VIX','SPY','QQQ','IWM']:
+    for symbol in ['^VIX']+list(DISPLAY_BENCHMARKS):
         matches=intra[intra.Symbol==symbol] if not intra.empty else pd.DataFrame()
         r=matches.iloc[0] if not matches.empty else None
         change=r['Today %'] if r is not None else None
         last=(f'{r["Last"]:.2f}' if symbol=='^VIX' else money(r['Last'])) if r is not None else '—'
         trend=('ABOVE VWAP' if r['Vs VWAP %']>0 else 'BELOW VWAP') if r is not None and pd.notna(r['Vs VWAP %']) else 'NO DATA'
         if symbol=='^VIX' and r is not None:trend='ELEVATED' if r['Last']>20 else 'NORMAL'
-        state=intraday.get('status','UNAVAILABLE')
+        state=r.get('Status',intraday.get('status','UNAVAILABLE')) if r is not None else 'UNAVAILABLE'
         if state!='CURRENT':trend=state
-        quote_tone=('down' if change and change>0 else 'up') if symbol=='^VIX' and r is not None else tone(change)
-        quotes.append(f'<div class="quote"><div><b>{e("VIX" if symbol=="^VIX" else symbol)}</b> <span class="pill {quote_tone}">{trend}</span><strong>{last}</strong></div><div class="quote-change {quote_tone}">{num(change,"%")}<small>vs previous close</small></div>{spark(intraday.get("frames",{}).get(symbol),"#37ca94" if quote_tone=="up" else "#ed6e7c","Completed 5-minute RTH closes")}</div>')
+        quote_tone=('down' if change>0 else 'up' if change<0 else 'muted') if symbol=='^VIX' and r is not None and pd.notna(change) else tone(change)
+        stamp=str(r.get('Bar close','')) if r is not None else ''
+        timestamp=(stamp[11:16]+' ET') if 'T' in stamp else stamp
+        extra=f'<small class="quote-asof">As of {e(timestamp)}</small>' if symbol=='^VIX' and timestamp else ''
+        quotes.append(f'<div class="quote"><div><b>{e("VIX" if symbol=="^VIX" else symbol)}</b> <span class="pill {quote_tone}">{trend}</span><strong>{last}</strong>{extra}</div><div class="quote-change {quote_tone}">{num(change,"%")}<small>vs previous close</small></div>{spark(intraday.get("frames",{}).get(symbol),"#37ca94" if quote_tone=="up" else "#ed6e7c","Completed 5-minute RTH closes")}</div>')
     sector=intra[intra.Symbol.isin(SECTORS)].sort_values('Vs SPY pp',ascending=False) if not intra.empty else pd.DataFrame()
     rows=[]
     if not sector.empty:
@@ -139,5 +183,13 @@ h3{font-size:15px!important;padding:5px 0!important}p{font-size:12px;line-height
 .theme-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 10px}.theme-tile{padding:13px;background:#101c27;border:1px solid #2b3d4d;border-radius:6px;border-top:2px solid #617e8c;min-width:0}.theme-title{font-size:13px;font-weight:700;color:#dce8f5;line-height:1.4;min-height:20px}.theme-reading{font:700 20px monospace;margin:10px 0}.theme-reading small{font:11px Arial;color:#a2b3c7;display:block;margin-top:5px}.theme-meta{display:flex;justify-content:space-between;gap:7px;font-size:11px;color:#bac9d9;border-top:1px solid #2b3948;padding-top:8px}.theme-meta span:last-child{color:#d6bd82}
 @media(max-width:900px){.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.st-key-scan_toolbar{padding:12px!important}.toolbar-heading{align-items:flex-start;flex-direction:column}.toolbar-footer{gap:8px;flex-direction:column}.theme-grid{grid-template-columns:1fr}.theme-reading{font-size:22px}.theme-title{font-size:15px}.st-key-scan_toolbar [data-testid="stButton"] button{min-height:46px!important}}
+
+.liquid-link{display:inline-flex;align-items:center;justify-content:center;background:#d5b468;color:#0a1420!important;border:1px solid #f0d79a;border-radius:5px;padding:9px 12px;font-size:12px;font-weight:800;letter-spacing:.02em;text-decoration:none!important;box-shadow:0 0 14px #d5b46820}.liquid-link:hover{background:#edcf88}.terminal-home{color:#b9c8db!important;text-decoration:none;font-size:11px}.header-meta{flex-wrap:wrap;justify-content:flex-end}
+.quote-strip{grid-template-columns:repeat(7,minmax(0,1fr))}.quote{flex-wrap:wrap;padding:12px 10px;gap:8px}.quote .spark{max-width:100%;width:100%;height:30px}.quote-asof{display:block;font:10px Arial;color:#a0b3c9;margin-top:4px}
+.theme-detail-scroll{max-height:640px}.theme-detail-table{min-width:1180px}.theme-detail-table th{position:sticky;top:0;z-index:1;background:#182635}.theme-detail-table td{vertical-align:middle}.signed-value{display:inline-block;font-weight:700;font-variant-numeric:tabular-nums;padding:5px 7px;border-radius:4px;min-width:55px}.signed-value.up{background:#15372c}.signed-value.down{background:#3b222e}.detail-badge{display:inline-block;padding:5px 7px;border-radius:4px;background:#1c2b3b;font-size:11px;font-weight:700}.detail-badge.up{background:#173b2e}.detail-badge.down{background:#3d2330}.badge-amber{color:#e9c976!important;background:#3a321f!important}.badge-blue{color:#83c6ff!important;background:#19334d!important}
+.theme-members-cell{min-width:260px;max-width:380px;white-space:normal!important}.member-list{display:flex;flex-wrap:wrap;gap:5px}.member-chip{display:inline-block;font:600 11px monospace!important;letter-spacing:.02em;border:1px solid #344658;border-radius:4px;padding:4px 6px;text-decoration:none!important;white-space:nowrap}.member-chip.up{background:#133a2a;border-color:#246044;color:#64e0aa}.member-chip.down{background:#3a202b;border-color:#6a3345;color:#ff94a3}.member-daily{background:#162f46;color:#98c7f2!important;border-color:#30516d}.member-missing{background:#141c26;color:#7f8d9d!important;border-style:dashed}.member-chip:hover{filter:brightness(1.25)}
+.preset-banner{display:flex;align-items:center;gap:15px;background:#2b261a;border:1px solid #77613b;border-left:3px solid #dab66b;border-radius:5px;padding:14px;margin:12px 0;color:#e7d6b0;font-size:13px;line-height:1.7}.preset-banner b{font-size:11px;letter-spacing:.08em;white-space:nowrap}
+@media(max-width:1599px){.quote-strip{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:680px){.quote-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.quote:first-child{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center}.quote:first-child .spark{width:100%;height:40px}.header-meta{justify-content:flex-start;gap:10px}.liquid-link{min-height:42px;font-size:12px}.theme-members-cell{min-width:220px}.member-chip{font-size:10px!important}.preset-banner{align-items:flex-start;flex-direction:column;gap:5px}}
 </style>
 '''

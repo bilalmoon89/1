@@ -3,6 +3,8 @@ from datetime import datetime, time, timedelta
 import pandas as pd
 from crescent_engine import ET, SECTORS, finite, normalise
 
+DISPLAY_BENCHMARKS=('SPY','QQQ','IWM','RSP','DIA','TLT')
+
 
 def intraday_bars(raw):
     """Preserve individual bar timestamps; the daily normalizer collapses them."""
@@ -31,7 +33,39 @@ def fetch_intraday(symbols):
         if frame.empty or frame.index.tz is None:
             failures[symbol]='No timezone-aware 5-minute bars'
         else:frames[symbol]=frame
+    if '^VIX' in symbols and '^VIX' not in frames:
+        try:
+            frame=intraday_bars(yf.Ticker('^VIX').history(period='5d',interval='5m',prepost=False,auto_adjust=False,actions=False))
+            if not frame.empty and frame.index.tz is not None:
+                frames['^VIX']=frame;failures.pop('^VIX',None)
+        except Exception:pass
     return frames,failures
+
+
+def vix_reading(prepared,daily,now):
+    """VIX has its own delayed index clock; it is never aligned as an ETF."""
+    frame=prepared.get('^VIX')
+    prior=normalise(daily.get('^VIX',pd.DataFrame()))
+    if frame is not None and not frame.empty:
+        stamp=frame.index[-1]+pd.Timedelta(minutes=5)
+        frame=frame[frame.index.date==frame.index[-1].date()]
+        previous=prior[prior.index.date<stamp.date()] if not prior.empty else prior
+        close=float(frame.Close.iloc[-1])
+        previous_close=float(previous.Close.iloc[-1]) if not previous.empty else None
+        age=max(0,(now-stamp.to_pydatetime()).total_seconds())
+        opened=now.weekday()<5 and time(9,30)<=now.time()<time(16)
+        status=('STALE' if stamp.date()!=now.date() or age>1800 else 'DELAYED' if age>600 else 'CURRENT') if opened else 'CLOSED'
+        return {'Symbol':'^VIX','Name':'VIX','Last':close,
+            'Today %':(close/previous_close-1)*100 if previous_close else None,
+            'From open %':None,'VWAP':None,'Vs VWAP %':None,'Vs SPY pp':None,
+            'Bar close':stamp.isoformat(),'Status':status,'Source':'Yahoo VIX index · separate timestamp'},frame
+    if not prior.empty:
+        stamp=prior.index[-1]
+        close=float(prior.Close.iloc[-1])
+        return {'Symbol':'^VIX','Name':'VIX','Last':close,'Today %':None,'From open %':None,
+            'VWAP':None,'Vs VWAP %':None,'Vs SPY pp':None,'Bar close':str(stamp.date()),
+            'Status':'LAST DAILY CLOSE','Source':'Yahoo completed daily close'},pd.DataFrame()
+    return None,pd.DataFrame()
 
 
 def session_rows(frames,daily,now=None):
@@ -47,12 +81,15 @@ def session_rows(frames,daily,now=None):
         f=f[(f.index.time>=time(9,30))&(f.index.time<time(16))&(f.index+pd.Timedelta(minutes=5)<=now)]
         if not f.empty:prepared[symbol]=f
     spy=prepared.get('SPY')
-    if spy is None:return {'rows':pd.DataFrame(),'frames':{},'asof':None,'session':None,'status':'UNAVAILABLE'}
+    if spy is None:
+        vix,series=vix_reading(prepared,daily,now)
+        return {'rows':pd.DataFrame([vix]) if vix else pd.DataFrame(),'frames':{'^VIX':series} if vix else {},'asof':None,'session':None,'status':'UNAVAILABLE'}
     anchor=spy.index[-1];day=anchor.date()
     market_open=now.weekday()<5 and time(9,30)<=now.time()<time(16)
     status='CURRENT' if market_open and day==now.date() and (now-anchor.to_pydatetime()-timedelta(minutes=5)).total_seconds()<=900 else 'STALE' if market_open else 'CLOSED'
     rows=[];series={}
     for symbol,f in prepared.items():
+        if symbol=='^VIX':continue
         f=f[(f.index.date==day)&(f.index<=anchor)]
         if f.empty or f.index[-1]!=anchor:continue
         prior=normalise(daily.get(symbol,pd.DataFrame()))
@@ -74,6 +111,10 @@ def session_rows(frames,daily,now=None):
     if frame.empty:return {'rows':frame,'frames':{},'asof':None,'session':str(day),'status':'UNAVAILABLE'}
     spy_today=next((r['Today %'] for r in rows if r['Symbol']=='SPY'),None)
     frame['Vs SPY pp']=[r-spy_today if finite(r) and finite(spy_today) else None for r in frame['Today %']]
+    vix,vix_series=vix_reading(prepared,daily,now)
+    if vix:
+        frame=pd.concat([frame,pd.DataFrame([vix])],ignore_index=True)
+        if not vix_series.empty:series['^VIX']=vix_series
     return {'rows':frame,'frames':series,'asof':(anchor+pd.Timedelta(minutes=5)).isoformat(),
         'session':str(day),'status':status}
 

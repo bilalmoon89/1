@@ -48,3 +48,16 @@ def test_missing_session_open_does_not_claim_session_vwap():
     result=session_rows({'SPY':frame},histories(),datetime(2026,11,3,9,42,tzinfo=ET))
     assert result['rows']['VWAP'].isna().all()
     assert result['rows']['From open %'].isna().all()
+
+
+def test_delayed_vix_is_kept_on_its_own_timestamp():
+    spy=pd.DataFrame({'Open':100,'High':100,'Low':100,'Close':100,'Volume':100},
+        index=pd.date_range('2026-11-03 09:30',periods=5,freq='5min',tz=ET))
+    vix=pd.DataFrame({'Open':18,'High':18,'Low':18,'Close':18,'Volume':0},
+        index=pd.date_range('2026-11-03 09:30',periods=2,freq='5min',tz=ET))
+    result=session_rows({'SPY':spy,'^VIX':vix},{},datetime(2026,11,3,10,0,tzinfo=ET))
+    row=result['rows'].set_index('Symbol').loc['^VIX']
+    assert row['Last']==18
+    assert row['Status']=='DELAYED'
+    assert '09:40' in row['Bar close']
+    assert row['VWAP'] is None or pd.isna(row['VWAP'])

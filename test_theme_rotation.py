@@ -1,5 +1,6 @@
 from crescent_feeds import generate_demo
 from theme_rotation import analyze_rotation, theme_symbols
+from terminal_view import theme_detail_table
 
 
 def test_theme_symbols_never_expand_the_loaded_universe():
@@ -20,3 +21,7 @@ def test_partial_basket_is_labelled_and_has_no_invented_session_return():
     assert row['Session coverage']=='UNAVAILABLE'
     assert row['Today %'] is None
     assert row['Lifecycle'].startswith('PARTIAL /')
+    assert 'MISSING1' in row['Members']
+    html=theme_detail_table(result)
+    assert 'member-missing' in html
+    assert 'MISSING1' in html

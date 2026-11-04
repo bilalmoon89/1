@@ -49,3 +49,18 @@ def test_dark_table_escapes_provider_strings():
     assert '<script>' not in html
     assert '&lt;script&gt;' in html
     assert 'terminal-table' in html
+
+
+def test_liquid_page_uses_standard_filters_and_real_feed_adapter(monkeypatch):
+    from test_liquid_uptrend import history
+    import liquid_uptrend
+    st.cache_data.clear()
+    monkeypatch.setattr(crescent_feeds,'yahoo_daily',lambda *a,**k:({'AAPL':history()},{}))
+    monkeypatch.setattr(liquid_uptrend,'fetch_industries',lambda *a,**k:{'AAPL':{'industry':'Consumer Electronics','key':'consumer-electronics'}})
+    app=AppTest.from_file('app.py',default_timeout=60)
+    app.query_params['view']='liquid'
+    app.run()
+    assert not app.exception
+    assert len(app.number_input)==6
+    assert next(x for x in app.checkbox if x.label.startswith('Exclude Pharmaceuticals')).value
+    assert any('AAPL' in x.value for x in app.markdown)

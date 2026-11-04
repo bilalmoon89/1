@@ -13,6 +13,16 @@ def theme_symbols(loaded):
     return sorted(out)
 
 
+def related_themes(loaded):
+    loaded=set(loaded)
+    return [t for t in THEMES if len(loaded.intersection(t['symbols']))>=2]
+
+
+def missing_theme_members(loaded):
+    loaded=set(loaded)
+    return sorted({s for t in related_themes(loaded) for s in t['symbols']}-loaded)
+
+
 def analyze_rotation(daily,intraday,themes=None):
     metrics={s:snapshot(f) for s,f in daily.items()}
     spy=metrics.get('SPY')
@@ -42,6 +52,9 @@ def analyze_rotation(daily,intraday,themes=None):
             'Session coverage':'BROAD' if session_full else 'PARTIAL' if session else 'UNAVAILABLE',
             'Above VWAP':f'{sum(r["Vs VWAP %"]>0 for r in vwap)}/{len(vwap)}' if vwap else '—',
             'RS 5D pp':round(rs5,2),'RS 21D pp':round(rs21,2),
-            'Members':', '.join(observed),'Session status':intraday.get('status','UNAVAILABLE')})
+            'Members':', '.join(members),'Loaded members':', '.join(observed),
+            'Member detail':[{'symbol':s,'loaded':s in observed,
+                'today':current[s]['Today %'] if s in current and finite(current[s]['Today %']) else None} for s in members],
+            'Session status':intraday.get('status','UNAVAILABLE')})
     if not output:return pd.DataFrame()
     return pd.DataFrame(output).sort_values('Today vs SPY pp',ascending=False,na_position='last').reset_index(drop=True)

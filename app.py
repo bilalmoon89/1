@@ -17,9 +17,11 @@ from crescent_engine import (ET,SECTORS,BENCHMARKS,CROSS_ASSETS,DEFAULT_WATCH,ET
 from crescent_feeds import (symbols_from_file,seed_universe,tv_leadership,
     yahoo_daily,yahoo_five_minute,read_events,risk_events,news_rss)
 from crescent_ui import card
-from terminal_view import CSS, header, overview, opportunity, table, e
-from intraday_context import fetch_intraday, session_rows, tradingview_quotes
-from theme_rotation import analyze_rotation, theme_symbols
+from terminal_view import CSS, header, overview, opportunity, table, e, theme_detail_table
+from intraday_context import fetch_intraday, session_rows, tradingview_quotes, DISPLAY_BENCHMARKS
+from theme_rotation import analyze_rotation, theme_symbols, related_themes, missing_theme_members
+from liquid_uptrend import fetch_industries
+from liquid_view import render_liquid_page
 from watchtower import follow_plan, focus_plan, FOLLOW_LIMIT, FOCUS_LIMIT
 from crescent_charts import candles
 from rotation_themes import THEMES
@@ -50,21 +52,42 @@ def cached_tv_quotes(symbols):
     return tradingview_quotes(symbols)
 
 
+@st.cache_data(ttl=86400,show_spinner=False)
+def cached_industries(symbols):
+    return fetch_industries(symbols)
+
+
 @st.fragment(run_every='60s')
 def render_intraday_context():
     snap=st.session_state.market_snapshot
     context={'rows':pd.DataFrame(),'status':'UNAVAILABLE'}
+    theme_history=dict(snap['frames'])
+    targets=related_themes(snap['frames'])
     if snap.get('loaded',0):
+        history_key=(snap.get('asof'),tuple(sorted(snap['frames'])))
+        if st.session_state.get('theme_history_key')!=history_key:
+            missing=missing_theme_members(snap['frames'])
+            st.session_state.theme_extra_history={}
+            if missing:
+                try:
+                    with st.spinner(f'Loading full member coverage for {len(targets)} related themes…'):
+                        extra,failed=cached_daily(tuple(missing))
+                        st.session_state.theme_extra_history={s:complete_daily(f,NOW()) for s,f in extra.items() if s in missing}
+                        st.session_state.theme_extra_failures=failed
+                except Exception as exc:st.caption(f'Theme member history unavailable: {type(exc).__name__}. Coverage stays partial.')
+            st.session_state.theme_history_key=history_key
+        theme_history.update(st.session_state.get('theme_extra_history',{}))
         try:
-            symbols=tuple(dict.fromkeys(['SPY','QQQ','IWM','^VIX']+list(SECTORS)+theme_symbols(snap['frames'])))
+            members=sorted({s for t in targets for s in t['symbols'] if s in theme_history})
+            symbols=tuple(dict.fromkeys(list(DISPLAY_BENCHMARKS)+['^VIX']+list(SECTORS)+members))
             frames,failures=cached_context_bars(symbols)
-            context=session_rows(frames,snap['frames'],NOW())
+            context=session_rows(frames,theme_history,NOW())
             if failures:st.caption(f'Intraday coverage: {len(frames)} series · {len(failures)} unavailable')
         except Exception as exc:
             st.caption(f'Intraday feed unavailable: {type(exc).__name__}. No daily substitute is shown.')
     st.session_state.intraday_context=context
     st.markdown(overview(snap,get_plans(),st.session_state.frozen,context),unsafe_allow_html=True)
-    themes=analyze_rotation(snap['frames'],context)
+    themes=analyze_rotation(theme_history,context,targets) if targets else pd.DataFrame()
     st.session_state.theme_rotation=themes
     render_theme_rotation(themes)
 
@@ -119,7 +142,7 @@ def all_symbols(pins,mode,breadth,with_tv):
             else:warnings.append(note)
         except Exception as exc:
             warnings.append(f'TradingView screener unavailable: {type(exc).__name__}: {str(exc)[:120]}. Using sector-balanced fallback.')
-    mandatory=list(BENCHMARKS)+list(SECTORS)+list(CROSS_ASSETS)
+    mandatory=list(BENCHMARKS)+list(DISPLAY_BENCHMARKS)+list(SECTORS)+list(CROSS_ASSETS)
     if st.session_state.get('include_etfs',True):mandatory+=list(ETF_TRADE_CANDIDATES)
     return list(dict.fromkeys(selection+mandatory)),sectors,explanation,warnings
 
@@ -483,7 +506,7 @@ def refresh_market(breadth, pins, discovery):
 
 
 def render_theme_rotation(themes):
-    st.markdown('<div class="section-heading">Theme rotation <span>Observed members from the current universe · partial baskets are labelled</span></div>',unsafe_allow_html=True)
+    st.markdown('<div class="section-heading">Theme rotation <span>Related baskets · expanded member coverage · partial data labelled</span></div>',unsafe_allow_html=True)
     if themes.empty:
         st.markdown('<div class="terminal-panel empty">No theme has two comparable members loaded yet. Theme membership never expands the selected universe.</div>',unsafe_allow_html=True)
         return
@@ -498,7 +521,8 @@ def render_theme_rotation(themes):
     st.markdown('<div class="theme-grid">'+''.join(cards)+'</div>',unsafe_allow_html=True)
     with st.expander(f'Theme detail · {len(themes)} observed / {len(THEMES)} defined baskets'):
         st.caption('Equal-weight averages of available members, not full-theme performance or fund flows. Broad coverage requires at least three members and 70% of the basket. Daily lifecycle is separate from intraday rotation.')
-        dark_frame(themes[['Theme','Today %','Today vs SPY pp','Session members','Session coverage','Above VWAP','Lifecycle','RS 5D pp','RS 21D pp','Members']])
+        st.caption('Full member lists are shown. Green/red chips have a session reading; blue chips have daily history only; dim chips are not loaded. Theme-only member downloads do not add trading candidates to the selected stock universe.')
+        st.markdown(theme_detail_table(themes),unsafe_allow_html=True)
 
 
 def record_follow(plan):
@@ -592,6 +616,10 @@ def main():
     init_state()
     st.markdown(CSS,unsafe_allow_html=True)
     st.markdown(header(st.session_state.last_refresh),unsafe_allow_html=True)
+    if st.query_params.get('view')=='liquid':
+        render_liquid_page(cached_daily,cached_industries,
+            lambda scope:all_symbols(st.session_state.pins,'Yahoo Finance — beta',scope,False)[0],NOW())
+        return
     snap=st.session_state.market_snapshot
     render_intraday_context()
     with st.container(key='scan_toolbar'):
