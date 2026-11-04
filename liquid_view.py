@@ -2,7 +2,6 @@
 import pandas as pd
 import streamlit as st
 from crescent_engine import complete_daily
-from crescent_feeds import symbols_from_file
 from liquid_uptrend import LiquidFilters, screen_history, apply_exclusions
 from terminal_view import table, e
 
@@ -39,26 +38,46 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now):
         one,two=st.columns(2)
         excluded=one.text_input('Exclude tickers',placeholder='e.g. ABC, XYZ',key='lu_excluded_tickers')
         keywords=two.text_input('Exclude other industries · keywords',placeholder='e.g. banks, insurance',key='lu_excluded_industries')
-        st.caption('Dollar volume = mean(close × volume) over 50 sessions. ADR N = (mean high N − mean low N) ÷ latest close × 100. Industry classification uses Yahoo with TradingView fallback, including diagnostics/research where identified; unverified industries are held out while this exclusion is enabled.')
+        st.caption('Dollar volume = mean(close × volume) over 50 sessions. ADR N = (mean high N − mean low N) ÷ latest close × 100. Industry classification uses a bounded TradingView request, including diagnostics/research where identified; unverified industries are held out while this exclusion is enabled.')
     run=st.button('Run Liquid Uptrend',type='primary',use_container_width=True)
-    initial=not st.session_state.get('liquid_started',False)
-    if run or initial:
-        st.session_state.liquid_started=True
-        symbols=universe_loader(scope)
-        stocks=symbols_from_file('stocks.csv')
-        with st.spinner(f'Checking liquidity and trend · {scope}…'):
-            try:
-                raw,fail=daily_loader(tuple(symbols))
-                history={s:complete_daily(f,now) for s,f in raw.items() if s in stocks}
-                st.session_state.liquid_history=history
-                st.session_state.liquid_scope=scope
-                st.session_state.liquid_failures=fail
-                st.session_state.liquid_updated=now.isoformat(timespec='seconds')
-            except Exception as exc:st.error(f'Liquid scan feed unavailable: {type(exc).__name__}: {str(exc)[:160]}')
+    if run:
+        symbols=list(dict.fromkeys(universe_loader(scope)))
+        st.session_state.liquid_job={'scope':scope,'symbols':symbols,'done':0,'history':{},'failures':{},'active':True}
+    scan_results(daily_loader,industry_loader,scope,now,
+        LiquidFilters(volume,dollar,sma200,sma50,adr1,adr20),exclude_pharma,excluded,keywords)
+
+
+@st.fragment(run_every='2s')
+def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,excluded,keywords):
+    job=st.session_state.get('liquid_job')
+    if job and job['scope']!=scope:job['active']=False
+    if job and job['active']:
+        if st.button('Stop scan',key='liquid_stop'):job['active']=False
+        else:
+            batch=tuple(job['symbols'][job['done']:job['done']+12])
+            with st.spinner(f"Checking stocks {job['done']+1}–{job['done']+len(batch)}…"):
+                try:raw,fail=daily_loader(batch)
+                except Exception as exc:raw,fail={},dict.fromkeys(batch,str(exc)[:160])
+            job['history'].update({s:complete_daily(f,now) for s,f in raw.items() if s in batch})
+            job['failures'].update(fail)
+            job['done']+=len(batch)
+            if job['done']>=len(job['symbols']):
+                job['active']=False
+                if job['history']:
+                    st.session_state.liquid_history=job['history']
+                    st.session_state.liquid_scope=scope
+                    st.session_state.liquid_failures=job['failures']
+                    st.session_state.liquid_updated=now.isoformat(timespec='seconds')
+        st.progress(job['done']/max(1,len(job['symbols'])),text=f"{job['done']} / {len(job['symbols'])} stocks checked · {len(job['history'])} available")
+    if job and job['scope']==scope and job['failures']:
+        st.warning(f"{len(job['failures'])} histories unavailable. Coverage is incomplete; unavailable stocks are not treated as failed setups.")
+    if job and not job['active'] and not job['history']:
+        st.error('The scan received no usable histories. Retry the scan; the last successful results have been retained.')
     history=st.session_state.get('liquid_history',{})
     if st.session_state.get('liquid_scope')!=scope:
-        st.info('Run the scan to load the selected universe.');return
-    matches,unavailable=screen_history(history,LiquidFilters(volume,dollar,sma200,sma50,adr1,adr20))
+        st.info('Select Run Liquid Uptrend to scan. The page loads without waiting for market-data connections. Results appear when the scan completes.');return
+    if job and job['active']:st.caption('Scan in progress. Showing the last completed results below.')
+    matches,unavailable=screen_history(history,filters)
     if not matches.empty:
         try:industries=industry_loader(tuple(matches.Symbol))
         except Exception:industries={}

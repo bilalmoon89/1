@@ -53,9 +53,11 @@ def test_dark_table_escapes_provider_strings():
 
 def test_liquid_page_uses_standard_filters_and_real_feed_adapter(monkeypatch):
     from test_liquid_uptrend import history
-    import liquid_uptrend
+    import liquid_uptrend, liquid_data, liquid_app
     st.cache_data.clear()
-    monkeypatch.setattr(crescent_feeds,'yahoo_daily',lambda *a,**k:({'AAPL':history()},{}))
+    monkeypatch.setattr(liquid_app,'universe',lambda scope:['AAPL'])
+    calls=[]
+    monkeypatch.setattr(liquid_data,'fetch_batch',lambda symbols:(calls.append(symbols) or {'AAPL':history()},{}))
     monkeypatch.setattr(liquid_uptrend,'fetch_industries',lambda *a,**k:{'AAPL':{'industry':'Consumer Electronics','key':'consumer-electronics'}})
     app=AppTest.from_file('app.py',default_timeout=60)
     app.query_params['view']='liquid'
@@ -63,4 +65,28 @@ def test_liquid_page_uses_standard_filters_and_real_feed_adapter(monkeypatch):
     assert not app.exception
     assert len(app.number_input)==6
     assert next(x for x in app.checkbox if x.label.startswith('Exclude Pharmaceuticals')).value
+    assert not calls
+    next(x for x in app.button if x.label=='Run Liquid Uptrend').click().run()
+    assert not app.exception
+    assert calls==[('AAPL',)]
     assert any('AAPL' in x.value for x in app.markdown)
+
+
+def test_liquid_failed_refresh_retains_last_good_results(monkeypatch):
+    from test_liquid_uptrend import history
+    import liquid_app, liquid_data
+    st.cache_data.clear()
+    monkeypatch.setattr(liquid_app,'universe',lambda scope:['AAPL'])
+    monkeypatch.setattr(liquid_data,'fetch_batch',lambda symbols:({'AAPL':history()},{}))
+    monkeypatch.setattr(liquid_data,'fetch_classification',lambda symbols:{'AAPL':{'industry':'Consumer Electronics'}})
+    app=AppTest.from_file('app.py',default_timeout=30)
+    app.query_params['view']='liquid'
+    app.run()
+    next(x for x in app.button if x.label=='Run Liquid Uptrend').click().run()
+    stamp=app.session_state['liquid_updated']
+    monkeypatch.setattr(liquid_data,'fetch_batch',lambda symbols:({}, {'AAPL':'Timeout'}))
+    next(x for x in app.button if x.label=='Run Liquid Uptrend').click().run()
+    assert not app.exception
+    assert app.session_state['liquid_updated']==stamp
+    assert 'AAPL' in app.session_state['liquid_history']
+    assert any('retained' in x.value for x in app.error)

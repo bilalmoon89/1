@@ -46,23 +46,15 @@ def screen_history(history,filters=None):
 
 
 def fetch_industries(symbols):
-    import yfinance as yf
-    from concurrent.futures import ThreadPoolExecutor
-    def one(symbol):
-        try:
-            info=yf.Ticker(symbol).get_info()
-            return symbol,{'industry':info.get('industry',''),'key':info.get('industryKey',''),'source':'Yahoo Finance'}
-        except Exception:return symbol,{'industry':'','key':''}
-    with ThreadPoolExecutor(max_workers=4) as pool:result=dict(pool.map(one,symbols))
-    missing=[s for s in symbols if not result[s].get('industry') and not result[s].get('key')]
-    if missing:
+    result={s:{'industry':'','key':'','source':'Unavailable'} for s in symbols}
+    if symbols:
         try:
             from tradingview_screener import Query,col
             _,rows=(Query().set_markets('america').select('name','industry')
-                .where(col('name').isin(missing)).limit(100).get_scanner_data(timeout=12))
+                .where(col('name').isin(list(symbols))).limit(len(symbols)).get_scanner_data(timeout=6))
             for _,row in rows.iterrows():
                 industry=row['industry'] if isinstance(row['industry'],str) else ''
-                if row['name'] in missing and industry:
+                if row['name'] in result and industry:
                     result[row['name']]={'industry':industry,'key':'','source':'TradingView'}
         except Exception:pass
     return result

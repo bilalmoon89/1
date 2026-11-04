@@ -3,13 +3,20 @@ This does not import, deploy to or mutate the original Crescent Scanner.
 Research/paper-planning only; no broker connection, no automatic trading.
 """
 from __future__ import annotations
+import streamlit as st
+from startup_imports import import_local
+
+# The liquid route starts without loading the full terminal or intraday engine.
+if st.query_params.get('view')=='liquid':
+    import_local('liquid_app').main()
+    st.stop()
+
 import io
 import json
 from datetime import datetime,time,timedelta
 from html import escape
 from zoneinfo import ZoneInfo
 import pandas as pd
-import streamlit as st
 
 from crescent_engine import (ET,SECTORS,BENCHMARKS,CROSS_ASSETS,DEFAULT_WATCH,ETF_TRADE_CANDIDATES,LEVERAGED_ETFS,Plan,
     complete_daily,normalise,snapshot,regime,make_plans,rank_plans,live_check,
@@ -17,11 +24,10 @@ from crescent_engine import (ET,SECTORS,BENCHMARKS,CROSS_ASSETS,DEFAULT_WATCH,ET
 from crescent_feeds import (symbols_from_file,seed_universe,tv_leadership,
     yahoo_daily,yahoo_five_minute,read_events,risk_events,news_rss)
 from crescent_ui import card
-from terminal_view import CSS, header, overview, opportunity, table, e, theme_detail_table
+_view=import_local('terminal_view')
+CSS,header,overview,opportunity,table,e,theme_detail_table=(_view.CSS,_view.header,_view.overview,_view.opportunity,_view.table,_view.e,_view.theme_detail_table)
 from intraday_context import fetch_intraday, session_rows, tradingview_quotes, DISPLAY_BENCHMARKS
 from theme_rotation import analyze_rotation, theme_symbols, related_themes, missing_theme_members
-from liquid_uptrend import fetch_industries
-from liquid_view import render_liquid_page
 from watchtower import follow_plan, focus_plan, FOLLOW_LIMIT, FOCUS_LIMIT
 from crescent_charts import candles
 from rotation_themes import THEMES
@@ -50,11 +56,6 @@ def cached_context_bars(symbols):
 @st.cache_data(ttl=60,show_spinner=False)
 def cached_tv_quotes(symbols):
     return tradingview_quotes(symbols)
-
-
-@st.cache_data(ttl=86400,show_spinner=False)
-def cached_industries(symbols):
-    return fetch_industries(tuple(symbols))
 
 
 @st.fragment(run_every='60s')
@@ -616,10 +617,6 @@ def main():
     init_state()
     st.markdown(CSS,unsafe_allow_html=True)
     st.markdown(header(st.session_state.last_refresh),unsafe_allow_html=True)
-    if st.query_params.get('view')=='liquid':
-        render_liquid_page(cached_daily,cached_industries,
-            lambda scope:all_symbols(st.session_state.pins,'Yahoo Finance — beta',scope,False)[0],NOW())
-        return
     snap=st.session_state.market_snapshot
     render_intraday_context()
     with st.container(key='scan_toolbar'):

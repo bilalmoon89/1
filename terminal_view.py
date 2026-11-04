@@ -3,7 +3,7 @@ from html import escape
 import math
 import pandas as pd
 from crescent_engine import snapshot, money, SECTORS
-from intraday_context import DISPLAY_BENCHMARKS
+from market_symbols import DISPLAY_BENCHMARKS
 from urllib.parse import quote
 
 def e(value):

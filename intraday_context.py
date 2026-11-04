@@ -3,7 +3,7 @@ from datetime import datetime, time, timedelta
 import pandas as pd
 from crescent_engine import ET, SECTORS, finite, normalise
 
-DISPLAY_BENCHMARKS=('SPY','QQQ','IWM','RSP','DIA','TLT')
+from market_symbols import DISPLAY_BENCHMARKS
 
 
 def intraday_bars(raw):

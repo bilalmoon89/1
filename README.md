@@ -46,7 +46,7 @@ Open `?view=liquid` from the highlighted header link. All six numerical checks m
 - Price relative to both SMA200 and SMA50 > 0.01%.
 - ADR over one session and 20 sessions > 3%. ADR N = (mean high N − mean low N) / latest close × 100.
 
-The standard exclusion removes Pharmaceuticals, Biotechnology & Life Sciences using Yahoo industry classification, with a TradingView fallback when Yahoo metadata is unavailable. This includes drug manufacturers and diagnostics/research where identified. The classification source is displayed; unverified industries are held out while the exclusion is enabled. The page supports additional ticker/industry-keyword exclusions and a one-click restoration of the standard preset. The selected 60/120/574-stock scope is labelled; this is not a claim of scanning every US listing. Passing this discovery screen does not authorize an entry.
+The standard exclusion removes Pharmaceuticals, Biotechnology & Life Sciences using a bounded TradingView industry-classification request. This includes drug manufacturers and diagnostics/research where identified. The classification source is displayed; unverified industries are held out while the exclusion is enabled. The page supports additional ticker/industry-keyword exclusions and a one-click restoration of the standard preset. The selected 60/120/574-stock scope is labelled; this is not a claim of scanning every US listing. Passing this discovery screen does not authorize an entry.
 
 The former Night Plan, Pre-open, Live Desk, Regime & Rotation, and Research screens are no longer navigation destinations. This rework does not add new Air Gap detection rules or data services. Legacy screenshots and release documents are retained under `docs/legacy` for historical reference only.
 
@@ -57,3 +57,5 @@ python -m pytest -q
 ```
 
 Deploy only this repository to its separate test Streamlit application using `app.py`. Do not replace the production scanner deployment.
+
+Liquid Uptrend opens without provider requests. Run explicitly to process 12 stocks per batch with progress and a stop control. Daily requests have a 12-second outer deadline; classification has an 8-second deadline. Failed daily requests are retried on the next explicit scan, and a wholly failed refresh retains the last successful results. Partial coverage is displayed.
