@@ -6,6 +6,10 @@ from __future__ import annotations
 import streamlit as st
 from startup_imports import import_local
 
+if st.query_params.get('view')=='ticker':
+    import_local('ticker_check_app').main()
+    st.stop()
+
 # The liquid route starts without loading the full terminal or intraday engine.
 if st.query_params.get('view')=='liquid':
     import_local('liquid_app').main()

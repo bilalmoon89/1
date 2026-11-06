@@ -69,3 +69,14 @@ Industry and curated Theme membership appear immediately after RVOL. Quote ET an
 
 
 After-hours validity: the terminal market strip and Liquid Leaders use regular-session data, not an extended-hours feed. The XNYS exchange calendar determines the latest expected session, including holidays, weekends, premarket and early closes. Old/missing closing bars are marked STALE or CLOSE PENDING rather than CLOSED. Benchmark cards retain full session dates; Liquid Leaders shows Session and Session status separately from shortened ET timestamps. Daily research completion uses the actual exchange close plus the existing 15-minute provider buffer, and an old saved daily snapshot prompts a rescan after that buffer. A completed regular-session close is never labelled as a current extended-hours quote.
+
+
+## Ticker Check
+
+Open the highlighted Ticker Check link (`?view=ticker`). It loads only when Check ticker is pressed. The report combines five reported revenue quarters, gross/operating/net margins, net income, diluted EPS and matching-period revenue YoY growth with current valuation multiples and completed daily/weekly technicals. It uses Yahoo Finance financials/history plus a separately timestamped TradingView session quote; missing fields remain unavailable. Provider failures are not cached as successful reports.
+
+Daily EMA9/21/50, daily SMA200 and weekly EMA8 are displayed. Daily holding requires three closes above and a recent test within 0.25 daily ATR. Weekly support is separately labelled tested/held, above/untested or below, using completed weeks. A completed daily close below SMA200 or a valid current TradingView price below its daily SMA200 is a hard NO GO. Weekly stage estimates use the completed 30-week SMA and disclosed four-week slope rules; ambiguous cases remain unclear.
+
+High tight flag is a preferred candidate: 100%+ advance within 40 sessions, followed by 10–25 sessions consolidating within 25% of the pole high on lower average volume. It does not bypass trend/risk checks. Conditional breakout and pullback stops use observed structural lows with a 0.15 ATR buffer. Targets use observed historical resistance; unknown targets stay blank. At least 2R and risk no greater than 3 ATR are required for a conditional plan. No automatic entries or orders are created, and live confirmation remains required.
+
+Historical valuation is explicitly an annual fiscal-year-end P/E snapshot reference, not a daily historical trading-average P/E. Currency mismatch, unreconciled splits, missing EPS and nonpositive earnings withhold affected historical comparisons. Full point-in-time historical multiples require a richer fundamental data source. This independent review does not change the scanner's existing detection/ranking rules.
