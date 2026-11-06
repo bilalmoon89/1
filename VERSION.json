@@ -1,6 +1,6 @@
 {
   "app": "Crescent Trade Terminal — BETA",
-  "version": "7.7.0-beta",
+  "version": "7.7.1-beta",
   "build_date": "2026-11-06",
   "deployment": "standalone-new-streamlit-app",
   "writes_to_existing_scanner": false,

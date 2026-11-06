@@ -5,7 +5,7 @@ import streamlit as st
 # Same SVG geometry as the recovered Crescent branding component.
 LOGO_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22" stroke="#B8922A" stroke-width="1" opacity="0.6"/><path d="M24 8C16.268 8 10 14.268 10 22s6.268 14 14 14c1.96 0 3.82-.39 5.52-1.09C26.04 32.56 23 28.56 23 24s3.04-8.56 6.52-10.91A13.93 13.93 0 0 0 24 8z" fill="#B8922A"/></svg>'
 CSS='''<style>
-:root{--cx-bg:#0E1D30;--cx-panel:#162941;--cx-line:#2e455d;--cx-text:#eef3f6;--cx-muted:#a3b5c9;--cx-gold:#d3ab55;--cx-green:#58c4a2;--cx-red:#eb8790}
+:root{--cx-bg:#0E1D30;--cx-panel:#162941;--cx-line:#2e455d;--cx-text:#eef3f6;--cx-muted:#a3b5c9;--cx-gold:#b29457;--cx-green:#58c4a2;--cx-red:#eb8790}
 :root{color-scheme:dark}
 [data-testid="stHeader"]{background:#0e1d30!important;color:#eef3f6!important}
 [data-testid="stToolbar"] button,[data-testid="stSidebarCollapseButton"] button,[data-testid="stExpandSidebarButton"] button{color:#eef3f6!important;background:#162941!important}
@@ -36,8 +36,8 @@ h1,h2,h3{letter-spacing:-.016em;color:var(--cx-text)!important}
 h1{font-weight:650!important;font-size:1.7rem!important}
 h2{font-size:1.3rem!important}h3{font-size:1.08rem!important}
 .cx-header{display:flex;align-items:center;gap:13px;border-bottom:1px solid #4d4c46;padding:8px 0 14px;margin-bottom:16px}
-.cx-header img{width:38px;height:38px}.cx-word{font:600 26px/1.1 Georgia,serif;color:#f1e9da}.cx-sub{font:600 10px/1.6 Arial,sans-serif;color:#d3ab55;letter-spacing:.2em;text-transform:uppercase;margin-top:3px}
-.cx-kicker{font-size:11px;color:#d3ab55;letter-spacing:.2em;font-weight:700;text-transform:uppercase;margin:4px 0 6px}
+.cx-header img{width:38px;height:38px}.cx-word{font:600 26px/1.1 Georgia,serif;color:#f1e9da}.cx-sub{font:600 10px/1.6 Arial,sans-serif;color:#b29457;letter-spacing:.2em;text-transform:uppercase;margin-top:3px}
+.cx-kicker{font-size:11px;color:#b29457;letter-spacing:.2em;font-weight:700;text-transform:uppercase;margin:4px 0 6px}
 .cx-hero{padding:15px 18px;background:linear-gradient(110deg,#1d354f,#14273e);border:1px solid #34506a;border-radius:12px;margin:8px 0 14px}
 .cx-hero b{font-size:17px}.cx-muted{font-size:12px;color:var(--cx-muted)}
 .cx-call{border-left:3px solid var(--cx-gold);background:#1b2d42;padding:12px 14px;margin:9px 0;border-radius:0 9px 9px 0;font-size:14px;line-height:1.55}
@@ -53,7 +53,7 @@ h2{font-size:1.3rem!important}h3{font-size:1.08rem!important}
 [data-testid="stDataFrame"]{border:1px solid #304961;border-radius:10px;overflow:hidden}
 /* Keep every action readable at rest, including secondary and download buttons. */
 :is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a),
-button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]){background:#d3ab55!important;color:#0d2032!important;border:1px solid #e3bf73!important;font-weight:700!important;opacity:1!important}
+button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]){background:#80612f!important;color:#f0e8d8!important;border:1px solid #9d7b40!important;font-weight:700!important;opacity:1!important}
 :is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a) *,
 button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]) *{color:inherit!important}
 :is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a):hover,
@@ -63,7 +63,7 @@ button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]):fo
 :is(.stButton,.stDownloadButton,.stLinkButton,.stFormSubmitButton) :is(button,a):disabled,
 button:is([kind="primary"],[kind="secondary"],[data-testid^="stBaseButton-"]):disabled{background:#776844!important;color:#ffffff!important;border-color:#ad9563!important;opacity:1!important;cursor:not-allowed!important}
 [data-baseweb="select"]>div,input,textarea{background:#1b3049!important;color:#f2f6fb!important}
-[data-testid="stTabs"] [aria-selected="true"]{color:#d3ab55!important}
+[data-testid="stTabs"] [aria-selected="true"]{color:#b29457!important}
 [data-testid="stExpander"]{border-color:#304961!important}
 .cx-divider{border-top:1px solid #31465c;margin:15px 0}
 </style>'''

@@ -7,7 +7,7 @@ import streamlit as st
 from liquid_data import bounded_call
 from ticker_check import financial_quarters,fundamental_review,technical_review,valuation_history,quote_review,number
 from terminal_view import CSS,header,table,e,money
-from liquid_table import leaders_table
+from ticker_check_view import CSS as TICKER_CSS,dashboard
 
 
 @st.cache_data(ttl=900,show_spinner=False)
@@ -39,12 +39,13 @@ class PartialTicker(Exception):
 
 def main():
     st.set_page_config(page_title='Ticker Check | Crescent Trade Terminal — BETA',page_icon='🌙',layout='wide',initial_sidebar_state='collapsed')
-    st.markdown(CSS,unsafe_allow_html=True)
+    st.markdown(CSS+TICKER_CSS,unsafe_allow_html=True)
     st.markdown(header(source='Yahoo Finance · reported financials'),unsafe_allow_html=True)
     st.markdown('<div class="section-heading">Ticker Check <span>Fundamentals · valuation · trend · conditional trade plan</span></div>',unsafe_allow_html=True)
     with st.form('ticker_lookup'):
-        symbol=st.text_input('Ticker',value=st.query_params.get('symbol','AAPL'),placeholder='e.g. NVDA, COHR, LITE').strip().upper()
-        run=st.form_submit_button('Check ticker',type='primary',use_container_width=True)
+        left,right=st.columns([4,1],vertical_alignment='bottom')
+        symbol=left.text_input('Ticker',value=st.query_params.get('symbol','AAPL'),placeholder='e.g. NVDA, COHR, LITE',label_visibility='collapsed').strip().upper()
+        with right:run=st.form_submit_button('Check ticker',type='primary',use_container_width=True)
     if run:
         if not re.fullmatch(r'[A-Z][A-Z0-9.\-]{0,14}',symbol):st.error('Enter one valid stock ticker.');return
         with st.spinner('Checking reported financials, valuation and completed daily/weekly trends…'):
@@ -56,8 +57,6 @@ def main():
     if not saved:
         st.info('Enter a ticker to load five reported quarters and its technical review. Below the daily 200 SMA is a firm NO GO.');return
     symbol=saved['symbol'];data=saved['data'];now=datetime.now(ZoneInfo('America/New_York'))
-    st.subheader(f'{symbol} · {data["info"].get("shortName",symbol)}')
-    st.caption(f'Yahoo Finance · retrieved {data["retrieved"]}. Fundamentals are reported fiscal quarters. Technical decisions use completed sessions, not live/after-hours prices. Reload with Check ticker; provider responses are cached for 15 minutes.')
     for error in data['errors']:st.warning(error+' · affected conclusions remain incomplete.')
     quarters=financial_quarters(data['quarters']);fund_state,fund_reason=fundamental_review(quarters,now)
     tech=technical_review(data['history'],now)
@@ -70,53 +69,27 @@ def main():
     elif fund_state=='INCOMPLETE':combined='REVIEW INCOMPLETE · FUNDAMENTALS'
     elif fund_state=='CAUTION':combined='WATCH · FUNDAMENTAL CAUTION'
     else:combined=tech['decision']
-    st.markdown(f'<div class="preset-banner"><b>{e(combined)}</b><span>{e(tech["reason"])}</span></div>',unsafe_allow_html=True)
-    st.caption('A conditional plan needs a confirmed trigger, current liquidity/volume, market context and a fresh intraday check. It is not an instruction to buy. Stops define invalidation; gaps can fill beyond them.')
-    st.subheader('Fundamental review · five reported quarters')
-    st.write(f'{fund_state} — {fund_reason}')
-    if quarters.empty:st.warning('No reported quarterly statements returned. No generated financials are substituted.')
-    else:
-        display=quarters.copy().round(2)
-        for column in ('Revenue','Net income'):
-            display[column]=display[column].map(lambda v:f'{float(v)/1e9:,.2f}B' if number(v) is not None else '—')
-        st.caption(f'{len(quarters)}/5 quarters available · reporting currency {data["info"].get("financialCurrency","unverified")}. B = billion currency units. YoY compares matching fiscal periods; missing EPS remains unavailable.')
-        st.markdown(leaders_table(display),unsafe_allow_html=True)
-    st.subheader('Valuation · current multiples and historical reference')
-    info=data['info'];metrics=[]
-    for label,key in [('Trailing P/E','trailingPE'),('Forward P/E · analyst estimate','forwardPE'),('Price / sales TTM','priceToSalesTrailing12Months'),('EV / EBITDA','enterpriseToEbitda')]:
-        value=number(info.get(key));metrics.append({'Metric':label,'Multiple':round(value,2) if value is not None and value>0 else None})
-    st.markdown(table(pd.DataFrame(metrics)),unsafe_allow_html=True)
-    valuations,note=valuation_history(data['annual'],data['history'],info)
-    if len(valuations)>=2:
-        st.write(f'Annual year-end P/E reference: mean {valuations["P/E"].mean():.1f}× · median {valuations["P/E"].median():.1f}× · {len(valuations)} profitable fiscal years.')
-        st.markdown(table(valuations.round(2)),unsafe_allow_html=True)
-    else:st.info('A reliable historical valuation average is unavailable from the supplied data. Current multiples alone do not establish its usual valuation.')
-    st.caption(note+' This is an annual snapshot reference, not the average multiple it traded at every day. Valuation is context, not a standalone cheap/expensive or trade decision.')
-    st.subheader('Technical decision · daily and weekly')
-    if quote.get('valid'):
-        st.markdown(table(pd.DataFrame([{'TradingView last':quote['price'],'Daily SMA200 · current':quote['sma200'],
-            'Status':quote['status'],'Updated ET':quote['updated'],'Feed':quote['feed']}]).round(2)),unsafe_allow_html=True)
-    else:st.warning(quote['status'])
-    if tech['averages'].empty:st.warning(tech['reason']);return
-    st.caption(f'Completed daily prices through {tech["asof"]} · last close {money(tech["price"])}. EMA holding requires three closes above plus a recent test within 0.25 ATR; above without a test is labelled untested. Weekly EMA uses completed weekly bars.')
-    st.markdown(table(tech['averages']),unsafe_allow_html=True)
-    st.caption(f"Weekly calculation through week ending {tech['weekly'].index[-1].date()}" if not tech['weekly'].empty else 'Weekly history unavailable.')
-    stage=tech['stage'];st.write('Stage analysis: '+stage['stage']);st.caption(stage['reason'])
-    pattern=tech['pattern'];st.write('High tight flag: '+('PREFERRED CANDIDATE' if pattern['found'] else 'NOT DETECTED'));st.caption(pattern['reason'])
-    levels=pd.DataFrame([{'Conditional entry':tech.get('entry'),'Structural stop':tech.get('stop'),
-        'Observed resistance target':tech.get('target'),'Reward / risk':tech.get('rr'),'ATR 14':tech.get('atr')}]).round(2)
-    st.markdown(table(levels),unsafe_allow_html=True)
-    st.caption('High tight flag stop: below flag low minus 0.15 ATR. Pullback stop: below the last five-session low minus 0.15 ATR. Trigger: pivot/high plus 0.05 ATR. Unknown structural targets remain blank; a target is never invented to produce a passing reward/risk ratio.')
-    chart=tech['frame'].Close.to_frame('Close')
-    for period in (9,21,50):chart[f'EMA {period}']=tech['frame'].Close.ewm(span=period,adjust=False).mean()
-    chart['SMA 200']=tech['frame'].Close.rolling(200).mean()
-    st.line_chart(chart.tail(252))
+    valuations,note=valuation_history(data['annual'],data['history'],data['info'])
+    st.markdown(dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations),unsafe_allow_html=True)
+    with st.expander('Analysis detail · rationale, valuation history & data timing'):
+        st.write(f'Fundamentals: {fund_state} — {fund_reason}')
+        st.caption(f'Retrieved {data["retrieved"]} · Yahoo Finance reported statements · 15-minute response cache. Technical prices are completed regular sessions; current TradingView quote/feed status is shown separately.')
+        if len(valuations)>=2:st.markdown(table(valuations.round(2)),unsafe_allow_html=True)
+        st.caption(note)
+        if not tech['averages'].empty:
+            st.write('Stage analysis: '+tech['stage']['stage']);st.caption(tech['stage']['reason'])
+            st.write('High tight flag: '+('PREFERRED CANDIDATE' if tech['pattern']['found'] else 'NOT DETECTED'));st.caption(tech['pattern']['reason'])
+            st.caption(f"Weekly calculation through {tech['weekly'].index[-1].date()}" if not tech['weekly'].empty else 'Weekly history unavailable.')
+        st.caption('Support holding requires three closes above plus a recent test within 0.25 daily ATR. Above without a test is labelled untested. Stops: flag low or five-session pullback low minus 0.15 ATR. Trigger: pivot/high plus 0.05 ATR. Unknown targets stay blank. Gaps may fill beyond stops.')
+        st.caption('Fundamental supportive requires five available revenue quarters, latest revenue YoY growth and positive operating/net margins. This is an operating-quality screen; balance sheet, dilution, earnings-event and industry-specific assessment remain separate.')
+    if tech['averages'].empty:return
+    with st.expander('Daily chart · 9 / 21 / 50 EMA & 200 SMA'):
+        chart=tech['frame'].Close.to_frame('Close')
+        for period in (9,21,50):chart[f'EMA {period}']=tech['frame'].Close.ewm(span=period,adjust=False).mean()
+        chart['SMA 200']=tech['frame'].Close.rolling(200).mean()
+        st.line_chart(chart.tail(252))
     with st.expander('Weekly chart · stage context'):
         weekly=tech['weekly'].Close.to_frame('Weekly close')
         weekly['EMA 8']=tech['weekly'].Close.ewm(span=8,adjust=False).mean()
         weekly['SMA 30']=tech['weekly'].Close.rolling(30).mean()
         st.line_chart(weekly.tail(104))
-    with st.expander('Research rules and limits'):
-        st.write('Fundamental supportive: positive latest revenue YoY, operating margin and net margin, with five reported quarters and a latest period no older than 180 days. This simple operating-quality screen is not a full balance-sheet, dilution, earnings-event or industry-specific assessment.')
-        st.write('Stage 2/4: price above/below a 30-week SMA whose four-week slope exceeds +1% / falls below −1%. Flat ±1% slopes following an earlier rise/fall flag provisional Stage 3/1; other cases remain transition/unclear. Stage labels need chart review.')
-        st.markdown('[High tight flag reference](https://s3-us-east-2.amazonaws.com/marderreport/wp-content/uploads/2020/05/16121620/Kuhn-The-High-Tight-Flag.pdf) · [Reported financial data](https://ranaroussi.github.io/yfinance/reference/yfinance.financials.html)')
