@@ -8,6 +8,7 @@ from liquid_data import bounded_call
 from ticker_check import financial_quarters,fundamental_review,technical_review,valuation_history,quote_review,number
 from terminal_view import CSS,header,table,e,money
 from ticker_check_view import CSS as TICKER_CSS,dashboard
+from ticker_financials import revenue_comparisons,rule_of_40,reconcile_revenue
 
 
 @st.cache_data(ttl=900,show_spinner=False)
@@ -21,12 +22,15 @@ def load_ticker(symbol):
     history=fetch('Daily prices',lambda:ticker.history(period='5y',auto_adjust=False,actions=True,timeout=8),pd.DataFrame())
     quarters=fetch('Quarterly statements',lambda:ticker.get_income_stmt(freq='quarterly'),pd.DataFrame())
     annual=fetch('Annual statements',lambda:ticker.get_income_stmt(freq='yearly'),pd.DataFrame())
+    comparisons=fetch('Year-earlier revenue comparisons',lambda:revenue_comparisons(ticker,quarters),{})
+    comparisons,derived=reconcile_revenue(comparisons,annual)
+    annual_cash=fetch('Annual cash flow',lambda:ticker.get_cashflow(freq='yearly'),pd.DataFrame())
     info=fetch('Current valuation / company profile',ticker.get_info,{})
     from liquid_data import fetch_session_quotes
     try:quote=fetch_session_quotes((symbol,)).get(symbol,{})
     except Exception as exc:
         errors.append(f'TradingView session quote: {type(exc).__name__}');quote={}
-    result={'quote':quote,'history':history,'quarters':quarters,'annual':annual,'info':info,'errors':errors,
+    result={'comparison_derived':derived,'comparisons':comparisons,'annual_cash':annual_cash,'quote':quote,'history':history,'quarters':quarters,'annual':annual,'info':info,'errors':errors,
         'retrieved':datetime.now(ZoneInfo('America/New_York')).isoformat(timespec='seconds')}
     # Do not cache provider failures: the next explicit request can retry immediately.
     if errors:raise PartialTicker(result)
@@ -41,7 +45,7 @@ def main():
     st.set_page_config(page_title='Ticker Check | Crescent Trade Terminal — BETA',page_icon='🌙',layout='wide',initial_sidebar_state='collapsed')
     st.markdown(CSS+TICKER_CSS,unsafe_allow_html=True)
     st.markdown(header(source='Yahoo Finance · reported financials'),unsafe_allow_html=True)
-    st.markdown('<div class="section-heading">Ticker Check <span>Fundamentals · valuation · trend · conditional trade plan</span></div>',unsafe_allow_html=True)
+    st.markdown('<div class="tc-note">TICKER CHECK · Fundamentals / technicals / trade plan</div>',unsafe_allow_html=True)
     with st.form('ticker_lookup'):
         left,right=st.columns([4,1],vertical_alignment='bottom')
         symbol=left.text_input('Ticker',value=st.query_params.get('symbol','AAPL'),placeholder='e.g. NVDA, COHR, LITE',label_visibility='collapsed').strip().upper()
@@ -58,7 +62,7 @@ def main():
         st.info('Enter a ticker to load five reported quarters and its technical review. Below the daily 200 SMA is a firm NO GO.');return
     symbol=saved['symbol'];data=saved['data'];now=datetime.now(ZoneInfo('America/New_York'))
     for error in data['errors']:st.warning(error+' · affected conclusions remain incomplete.')
-    quarters=financial_quarters(data['quarters']);fund_state,fund_reason=fundamental_review(quarters,now)
+    quarters=financial_quarters(data['quarters'],data.get('comparisons',{}));fund_state,fund_reason=fundamental_review(quarters,now)
     tech=technical_review(data['history'],now)
     quote=quote_review(data.get('quote',{}),now)
     if quote.get('valid') and quote['below200']:
@@ -70,12 +74,18 @@ def main():
     elif fund_state=='CAUTION':combined='WATCH · FUNDAMENTAL CAUTION'
     else:combined=tech['decision']
     valuations,note=valuation_history(data['annual'],data['history'],data['info'])
-    st.markdown(dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations),unsafe_allow_html=True)
+    r40=rule_of_40(data['annual'],data.get('annual_cash',pd.DataFrame()))
+    st.markdown(dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations,r40),unsafe_allow_html=True)
     with st.expander('Analysis detail · rationale, valuation history & data timing'):
         st.write(f'Fundamentals: {fund_state} — {fund_reason}')
         st.caption(f'Retrieved {data["retrieved"]} · Yahoo Finance reported statements · 15-minute response cache. Technical prices are completed regular sessions; current TradingView quote/feed status is shown separately.')
         if len(valuations)>=2:st.markdown(table(valuations.round(2)),unsafe_allow_html=True)
         st.caption(note)
+        st.write(f"Rule of 40 · fiscal year {r40['period'] or 'unavailable'} · revenue growth {r40['growth']}% + FCF margin {r40['margin']}%. Annual GAAP revenue variant; primarily a software/SaaS reference, not a universal trade gate.")
+        st.markdown('[Rule of 40 methodology](https://www.saasmetricsboard.com/rule-of-40)')
+        missing=int(quarters['Revenue YoY %'].isna().sum()) if not quarters.empty else 5
+        if data.get('comparison_derived'):st.caption('Derived year-earlier revenue: '+', '.join(data['comparison_derived'])+'; reconciled annual revenue minus the other three reported fiscal quarters.')
+        if missing:st.caption(f'{missing} revenue YoY comparisons unavailable: the provider did not return matching year-earlier quarters. No growth estimates or annual-as-quarter substitutions are used.')
         if not tech['averages'].empty:
             st.write('Stage analysis: '+tech['stage']['stage']);st.caption(tech['stage']['reason'])
             st.write('High tight flag: '+('PREFERRED CANDIDATE' if tech['pattern']['found'] else 'NOT DETECTED'));st.caption(tech['pattern']['reason'])

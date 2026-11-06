@@ -10,10 +10,10 @@ def number(value):
     except (TypeError,ValueError):return None
 
 
-def financial_quarters(statement):
+def financial_quarters(statement,comparisons=None):
     if statement is None or statement.empty:return pd.DataFrame()
     rows=[]
-    for end in sorted(statement.columns,reverse=True)[:5]:
+    for end in sorted(statement.columns,reverse=True):
         def value(*keys):
             for key in keys:
                 if key in statement.index:
@@ -30,13 +30,18 @@ def financial_quarters(statement):
             'Net margin %':margin(net),'Net income':net,'Diluted EPS':value('DilutedEPS','Diluted EPS')})
     result=pd.DataFrame(rows)
     result['Revenue YoY %']=None
+    baseline={str(r['Period end']):r['Revenue'] for _,r in result.iterrows()}
+    for date,value in (comparisons or {}).items():
+        if number(value) is not None and number(baseline.get(str(pd.Timestamp(date).date()))) is None:baseline[str(pd.Timestamp(date).date())]=float(value)
     for i,row in result.iterrows():
-        # Fiscal quarter end must match a year-earlier quarter, not an arbitrary fourth row.
-        for j,older in result.iterrows():
-            days=(pd.Timestamp(row['Period end'])-pd.Timestamp(older['Period end'])).days
-            if 350<=days<=380 and number(row.Revenue) is not None and number(older.Revenue) is not None and older.Revenue>0:
-                result.loc[i,'Revenue YoY %']=(row.Revenue/older.Revenue-1)*100
-    return result
+        matches=[(abs((pd.Timestamp(row['Period end'])-pd.Timestamp(date)).days-365),value)
+            for date,value in baseline.items() if 350<=(pd.Timestamp(row['Period end'])-pd.Timestamp(date)).days<=380
+            and number(value) is not None and value>0]
+        if matches and number(row.Revenue) is not None:
+            old=min(matches,key=lambda item:item[0])[1]
+            result.loc[i,'Revenue YoY %']=(row.Revenue/old-1)*100
+    return result.head(5).copy()
+
 
 
 def fundamental_review(quarters,now):

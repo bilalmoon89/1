@@ -112,3 +112,54 @@ def test_weekly_support_distinguishes_above_from_tested_hold():
     result=technical_review(history(np.linspace(100,200,260)),NOW)
     row=result['averages'].iloc[-1]
     assert row['State'] in ('TESTED & HELD','ABOVE · UNTESTED','BELOW','UNKNOWN')
+
+
+def test_all_five_yoy_values_use_older_comparison_quarters():
+    columns=pd.date_range('2024-09-30',periods=9,freq='QE')
+    source=pd.DataFrame([list(range(100,190,10))],index=['TotalRevenue'],columns=columns)
+    rows=financial_quarters(source)
+    assert len(rows)==5 and rows['Revenue YoY %'].notna().all()
+    assert rows.iloc[-1]['Revenue YoY %']==pytest.approx(40)
+    recent=source.iloc[:,-5:]
+    earlier={str(d.date()):float(source.loc['TotalRevenue',d]) for d in source.columns[:-5]}
+    enriched=financial_quarters(recent,earlier)
+    assert enriched['Revenue YoY %'].tolist()==pytest.approx(rows['Revenue YoY %'].tolist())
+
+
+def test_yoy_remains_missing_without_a_matching_prior_quarter():
+    rows=financial_quarters(statement())
+    assert rows['Revenue YoY %'].notna().sum()==1
+
+
+def test_rule_of_40_matches_annual_periods_and_capex_sign():
+    from ticker_financials import rule_of_40
+    dates=pd.to_datetime(['2025-12-31','2024-12-31'])
+    annual=pd.DataFrame([[120.,100.]],index=['TotalRevenue'],columns=dates)
+    for capex in (-6.,6.):
+        cf=pd.DataFrame([[36.],[capex]],index=['OperatingCashFlow','CapitalExpenditure'],columns=dates[:1])
+        result=rule_of_40(annual,cf)
+        assert result['score']==pytest.approx(45.)
+        assert result['growth']==pytest.approx(20.) and result['margin']==25.
+        assert result['period']=='2025-12-31'
+    assert rule_of_40(annual,pd.DataFrame())['score'] is None
+
+
+def test_compact_report_removes_net_income_amount_and_includes_rule_40():
+    from ticker_check_view import dashboard
+    q=financial_quarters(statement())
+    tech=technical_review(history(np.linspace(100,200,260)),NOW)
+    html=dashboard('TEST',{'info':{},'retrieved':NOW.isoformat()},q,'SUPPORTIVE',tech,
+        {'valid':False,'status':'Unavailable'},'WAIT',pd.DataFrame(),
+        {'score':45.,'status':'≥40','period':'2025-12-31'})
+    assert '<th>Net income</th>' not in html and '<th>EPS</th>' in html
+    assert 'RULE OF 40' in html and '45.0' in html and 'YoY 1/5' in html
+
+
+def test_revenue_reconciliation_requires_exactly_three_known_quarters():
+    from ticker_financials import reconcile_revenue
+    annual=pd.DataFrame([[400.,350.]],index=['TotalRevenue'],columns=pd.to_datetime(['2025-09-30','2024-09-30']))
+    source={'2025-03-31':95.,'2025-06-30':100.,'2025-09-30':105.}
+    result,derived=reconcile_revenue(source,annual)
+    assert result['2024-12-31']==100. and derived==['2024-12-31']
+    result,derived=reconcile_revenue({'2025-03-31':95.},annual)
+    assert not derived and len(result)==1
