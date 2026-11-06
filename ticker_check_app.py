@@ -25,14 +25,14 @@ def load_ticker(symbol):
     annual=fetch('Annual statements',lambda:ticker.get_income_stmt(freq='yearly'),pd.DataFrame())
     comparisons=fetch('Year-earlier revenue comparisons',lambda:revenue_comparisons(ticker,quarters),{})
     comparisons,derived=reconcile_revenue(comparisons,annual)
-    annual_cash=fetch('Annual cash flow',lambda:ticker.get_cashflow(freq='yearly'),pd.DataFrame())
+    quarterly_cash=fetch('Quarterly cash flow',lambda:ticker.get_cashflow(freq='quarterly'),pd.DataFrame())
     if not info.get('financialCurrency') or not (info.get('shortName') or info.get('longName')):
         errors.append('Company profile / current valuation incomplete; retry Check ticker')
     from liquid_data import fetch_session_quotes
     try:quote=fetch_session_quotes((symbol,)).get(symbol,{})
     except Exception as exc:
         errors.append(f'TradingView session quote: {type(exc).__name__}');quote={}
-    result={'comparison_derived':derived,'comparisons':comparisons,'annual_cash':annual_cash,'quote':quote,'history':history,'quarters':quarters,'annual':annual,'info':info,'errors':errors,
+    result={'comparison_derived':derived,'comparisons':comparisons,'quarterly_cash':quarterly_cash,'quote':quote,'history':history,'quarters':quarters,'annual':annual,'info':info,'errors':errors,
         'retrieved':datetime.now(ZoneInfo('America/New_York')).isoformat(timespec='seconds')}
     # Do not cache provider failures: the next explicit request can retry immediately.
     if errors:raise PartialTicker(result)
@@ -76,14 +76,16 @@ def main():
     elif fund_state=='CAUTION':combined='WATCH · FUNDAMENTAL CAUTION'
     else:combined=tech['decision']
     valuations,note=valuation_history(data['annual'],data['history'],data['info'])
-    r40=rule_of_40(data['annual'],data.get('annual_cash',pd.DataFrame()))
+    r40=rule_of_40(data['quarters'],data.get('quarterly_cash',pd.DataFrame()),data.get('comparisons',{}),data['annual'])
     st.markdown(dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations,r40),unsafe_allow_html=True)
     with st.expander('Analysis detail · rationale, valuation history & data timing'):
         st.write(f'Fundamentals: {fund_state} — {fund_reason}')
         st.caption(f'Retrieved {data["retrieved"]} · Yahoo Finance reported statements · 15-minute response cache. Technical prices are completed regular sessions; current TradingView quote/feed status is shown separately.')
         if len(valuations)>=2:st.markdown(table(valuations.round(2)),unsafe_allow_html=True)
         st.caption(note)
-        st.write(f"Rule of 40 · fiscal year {r40['period'] or 'unavailable'} · revenue growth {r40['growth']}% + FCF margin {r40['margin']}%. Annual GAAP revenue variant; primarily a software/SaaS reference, not a universal trade gate.")
+        component=lambda v:f'{float(v):.2f}' if number(v) is not None else '—'
+        st.write(f"Rule of 40 · TTM ending {r40['period'] or 'unavailable'} · revenue growth {component(r40['growth'])}% + FCF margin {component(r40['margin'])}%. Same four-quarter window; growth compares the preceding TTM. Software/SaaS reference, not a universal trade gate.")
+        st.caption(r40['reason'])
         st.markdown('[Rule of 40 methodology](https://www.saasmetricsboard.com/rule-of-40)')
         missing=int(quarters['Revenue YoY %'].isna().sum()) if not quarters.empty else 5
         if data.get('comparison_derived'):st.caption('Derived year-earlier revenue: '+', '.join(data['comparison_derived'])+'; reconciled annual revenue minus the other three reported fiscal quarters.')

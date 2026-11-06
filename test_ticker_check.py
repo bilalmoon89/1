@@ -131,17 +131,17 @@ def test_yoy_remains_missing_without_a_matching_prior_quarter():
     assert rows['Revenue YoY %'].notna().sum()==1
 
 
-def test_rule_of_40_matches_annual_periods_and_capex_sign():
+def test_rule_of_40_matches_latest_ttm_periods_and_capex_sign():
     from ticker_financials import rule_of_40
-    dates=pd.to_datetime(['2025-12-31','2024-12-31'])
-    annual=pd.DataFrame([[120.,100.]],index=['TotalRevenue'],columns=dates)
+    dates=pd.date_range('2024-12-31',periods=8,freq='QE')
+    quarters=pd.DataFrame([[100.]*4+[120.]*4],index=['TotalRevenue'],columns=dates)
     for capex in (-6.,6.):
-        cf=pd.DataFrame([[36.],[capex]],index=['OperatingCashFlow','CapitalExpenditure'],columns=dates[:1])
-        result=rule_of_40(annual,cf)
+        cf=pd.DataFrame([[36.]*4,[capex]*4],index=['OperatingCashFlow','CapitalExpenditure'],columns=dates[-4:])
+        result=rule_of_40(quarters,cf)
         assert result['score']==pytest.approx(45.)
         assert result['growth']==pytest.approx(20.) and result['margin']==25.
-        assert result['period']=='2025-12-31'
-    assert rule_of_40(annual,pd.DataFrame())['score'] is None
+        assert result['period']=='2026-09-30'
+    assert rule_of_40(quarters,pd.DataFrame())['score'] is None
 
 
 def test_compact_report_removes_net_income_amount_and_includes_rule_40():
@@ -163,3 +163,38 @@ def test_revenue_reconciliation_requires_exactly_three_known_quarters():
     assert result['2024-12-31']==100. and derived==['2024-12-31']
     result,derived=reconcile_revenue({'2025-03-31':95.},annual)
     assert not derived and len(result)==1
+
+
+def test_ttm_rule_advances_beyond_fiscal_year_and_does_not_fall_back():
+    from ticker_financials import rule_of_40
+    dates=pd.date_range('2024-09-30',periods=8,freq='QE')
+    quarters=pd.DataFrame([[100.]*4+[120.]*4],index=['TotalRevenue'],columns=dates)
+    cash=pd.DataFrame([[30.]*4],index=['FreeCashFlow'],columns=dates[-4:])
+    annual=pd.DataFrame([[9999.,8888.]],index=['TotalRevenue'],columns=pd.to_datetime(['2025-12-31','2024-12-31']))
+    result=rule_of_40(quarters,cash,annual=annual)
+    assert result['period']=='2026-06-30' and result['score']==pytest.approx(45.)
+    stale=cash.iloc[:,:-1]
+    result=rule_of_40(quarters,stale,annual=annual)
+    assert result['score'] is None and result['period']=='2026-06-30'
+    result=rule_of_40(quarters.iloc[:,-5:],cash,annual=annual)
+    assert result['score'] is None  # Different fiscal year end is not the required prior TTM.
+
+
+def test_ttm_rule_requires_complete_four_quarter_cash_flow():
+    from ticker_financials import rule_of_40
+    dates=pd.date_range('2024-12-31',periods=8,freq='QE')
+    quarters=pd.DataFrame([[100.]*4+[120.]*4],index=['TotalRevenue'],columns=dates)
+    cash=pd.DataFrame([[30.,float('nan'),30.,30.]],index=['FreeCashFlow'],columns=dates[-4:])
+    assert rule_of_40(quarters,cash)['score'] is None
+    cash.loc['FreeCashFlow']=-12.
+    result=rule_of_40(quarters,cash)
+    assert result['margin']==-10. and result['score']==pytest.approx(10.)
+
+
+def test_prior_annual_total_allowed_only_for_identical_ttm_end():
+    from ticker_financials import rule_of_40
+    dates=pd.date_range('2025-09-30',periods=5,freq='QE')
+    quarters=pd.DataFrame([[100.]+[120.]*4],index=['TotalRevenue'],columns=dates)
+    cash=pd.DataFrame([[30.]*4],index=['FreeCashFlow'],columns=dates[-4:])
+    annual=pd.DataFrame([[400.]],index=['TotalRevenue'],columns=pd.to_datetime(['2025-09-30']))
+    assert rule_of_40(quarters,cash,annual=annual)['score']==pytest.approx(45.)
