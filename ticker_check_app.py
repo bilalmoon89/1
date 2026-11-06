@@ -19,13 +19,15 @@ def load_ticker(symbol):
         try:return bounded_call(function,timeout=12)
         except Exception as exc:
             errors.append(f'{label}: {type(exc).__name__}');return default
+    info=fetch('Current valuation / company profile',ticker.get_info,{})
     history=fetch('Daily prices',lambda:ticker.history(period='5y',auto_adjust=False,actions=True,timeout=8),pd.DataFrame())
     quarters=fetch('Quarterly statements',lambda:ticker.get_income_stmt(freq='quarterly'),pd.DataFrame())
     annual=fetch('Annual statements',lambda:ticker.get_income_stmt(freq='yearly'),pd.DataFrame())
     comparisons=fetch('Year-earlier revenue comparisons',lambda:revenue_comparisons(ticker,quarters),{})
     comparisons,derived=reconcile_revenue(comparisons,annual)
     annual_cash=fetch('Annual cash flow',lambda:ticker.get_cashflow(freq='yearly'),pd.DataFrame())
-    info=fetch('Current valuation / company profile',ticker.get_info,{})
+    if not info.get('financialCurrency') or not (info.get('shortName') or info.get('longName')):
+        errors.append('Company profile / current valuation incomplete; retry Check ticker')
     from liquid_data import fetch_session_quotes
     try:quote=fetch_session_quotes((symbol,)).get(symbol,{})
     except Exception as exc:
