@@ -59,15 +59,19 @@ def normalise(raw):
 
 
 def complete_daily(raw,now=None):
-    """Remove possibly forming US session from daily histories before 16:15 ET.
+    """Remove possibly forming US sessions until 15 minutes after the exchange close.
     A 15-min buffer cannot certify a provider's bar; provider freshness is also shown.
     """
     frame=normalise(raw)
     now=now or datetime.now(ET)
     if now.tzinfo is None:now=now.replace(tzinfo=ET)
     here=now.astimezone(ET)
-    if len(frame) and frame.index[-1].date()==here.date() and here.time()<time(16,15):
-        return frame.iloc[:-1]
+    if len(frame) and frame.index[-1].date()==here.date():
+        from session_validity import calendar
+        cal=calendar();session=pd.Timestamp(here.date())
+        if not cal.is_session(session):return frame.iloc[:-1]
+        cutoff=cal.session_close(session)+pd.Timedelta(minutes=15)
+        if pd.Timestamp(here)<cutoff:return frame.iloc[:-1]
     return frame
 
 

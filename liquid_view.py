@@ -27,7 +27,7 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now,quote_lo
     scope=left.selectbox('Liquid scan universe',['Full 574','TradingView US · top 1,500','Balanced 120','Balanced 60'],key='lu_scope')
     mode=st.radio('Data view',['Intraday · TradingView','Completed daily'],horizontal=True,key='lu_mode')
     custom=st.text_input('Additional tickers',placeholder='Add symbols beyond the stock list, e.g. COHR, LITE, IONQ',key='lu_extra')
-    st.caption('Intraday: session price, range, SMA and VWAP from TradingView; 20D volume and 50D dollar volume remain completed-session averages. Feed delay and quote time are shown. After the close, the current regular-session snapshot is shown; before the open or on non-trading days, previous-session quotes are held out. Custom tickers also pass every standard filter.')
+    st.caption('Intraday: session price, range, SMA and VWAP from TradingView; 20D volume and 50D dollar volume remain completed-session averages. Feed delay and quote time are shown. After the close, the current regular-session snapshot is shown; before the open or on non-trading days, the latest completed regular session is labelled with its date. Extended-hours quotes are not included. Custom tickers also pass every standard filter.')
     if scope.startswith('TradingView US'):st.caption('US primary stocks above SMA50 and SMA200, ranked by 90D average volume; discovery is capped at 1,500. Exact liquidity, ADR and exclusions are checked afterward. A first scan can take several minutes; partial matches appear while it runs.')
     right.button('Restore standard preset',on_click=reset_preset,use_container_width=True)
     with st.expander('Filters / exclusions · standard preset',expanded=False):
@@ -58,7 +58,7 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now,quote_lo
         if st.button('Refresh quotes',disabled=bool(job.get('active'))):
             if hasattr(quote_loader,'clear'):quote_loader.clear()
             job['quote_refresh']=0
-    st.caption('Quote ET and Retrieved ET show Eastern Time. After the scan finishes, the table stays still; use Refresh quotes to update it.')
+    st.caption('Quote ET and Retrieved ET show Eastern Time. This is a saved snapshot of the regular session, not an after-hours feed. After the scan finishes, use Refresh quotes to revalidate it.')
     polling=bool(job and job.get('active') and job.get('scope')==scope and job.get('custom','')==custom)
     st.fragment(run_every='2s' if polling else None)(scan_results)(daily_loader,industry_loader,scope,now,
         LiquidFilters(volume,dollar,sma200,sma50,adr1,adr20),exclude_pharma,excluded,keywords,mode,quote_loader,custom)

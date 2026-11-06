@@ -84,6 +84,7 @@ def screen_intraday(history,quotes,now,filters=None):
     """Active session ranges and prices; completed-session liquidity baselines."""
     from datetime import datetime,time
     from zoneinfo import ZoneInfo
+    from session_validity import session_clock,regular_status
     filters=filters or LiquidFilters()
     rows=[];missing={};et=ZoneInfo('America/New_York')
     now=now.astimezone(et)
@@ -93,9 +94,10 @@ def screen_intraday(history,quotes,now,filters=None):
             stamp=datetime.fromtimestamp(float(q['last_bar_update_time']),et)
             session=datetime.fromtimestamp(float(q['time']),et)
             if (now-stamp).total_seconds() < -300:raise ValueError('Quote timestamp is in the future')
-            if session.date()!=now.date() or stamp.date()!=now.date():raise ValueError('No current-session quote')
-            if time(9,30)<=now.time()<time(16) and (now-stamp).total_seconds()>1800:
-                raise ValueError('Intraday quote is stale (over 30 minutes)')
+            clock=session_clock(now)
+            if session.date()!=clock['date'] or stamp.date()!=clock['date']:raise ValueError('No quote for the latest regular session')
+            status=regular_status(stamp,now,max_age_seconds=1800,close_tolerance_seconds=60)
+            if status in ('STALE','UNVERIFIED'):raise ValueError('Regular-session quote is stale or incomplete')
             f=f[f.index.date<session.date()]
             if len(f)<200:raise ValueError('200 completed daily bars required')
             if f.Volume.tail(50).isna().any() or (f.Volume.tail(50)<0).any():raise ValueError('Invalid historical volume')
@@ -118,7 +120,7 @@ def screen_intraday(history,quotes,now,filters=None):
                 'Session volume':q.get('volume'),'RVOL':q.get('relative_volume_10d_calc'),
                 'Avg volume 20D':vol,'Avg $ volume 50D':dollar,'Vs SMA200 %':above200,'Vs SMA50 %':above50,
                 'ADR 1D %':adr1,'ADR 20D %':adr20,'Quote ET':stamp.isoformat(timespec='seconds'),
-                'Feed':mode,'Source':'TradingView','Retrieved ET':q.get('retrieved',''),
+                'Session':str(session.date()),'Session status':status,'Feed':mode,'Source':'TradingView','Retrieved ET':q.get('retrieved',''),
                 'Baseline through':str(f.index[-1].date())})
         except (KeyError,ValueError,TypeError,OverflowError,OSError) as exc:missing[symbol]=str(exc)
     result=pd.DataFrame(rows)

@@ -4,6 +4,7 @@ import pandas as pd
 from crescent_engine import ET, SECTORS, finite, normalise
 
 from market_symbols import DISPLAY_BENCHMARKS
+from session_validity import regular_status
 
 
 def intraday_bars(raw):
@@ -54,7 +55,8 @@ def vix_reading(prepared,daily,now):
         previous_close=float(previous.Close.iloc[-1]) if not previous.empty else None
         age=max(0,(now-stamp.to_pydatetime()).total_seconds())
         opened=now.weekday()<5 and time(9,30)<=now.time()<time(16)
-        status=('STALE' if stamp.date()!=now.date() or age>1800 else 'DELAYED' if age>600 else 'CURRENT') if opened else 'CLOSED'
+        status=regular_status(stamp,now,max_age_seconds=1800)
+        if status=='CURRENT' and age>600:status='DELAYED'
         return {'Symbol':'^VIX','Name':'VIX','Last':close,
             'Today %':(close/previous_close-1)*100 if previous_close else None,
             'From open %':None,'VWAP':None,'Vs VWAP %':None,'Vs SPY pp':None,
@@ -86,7 +88,7 @@ def session_rows(frames,daily,now=None):
         return {'rows':pd.DataFrame([vix]) if vix else pd.DataFrame(),'frames':{'^VIX':series} if vix else {},'asof':None,'session':None,'status':'UNAVAILABLE'}
     anchor=spy.index[-1];day=anchor.date()
     market_open=now.weekday()<5 and time(9,30)<=now.time()<time(16)
-    status='CURRENT' if market_open and day==now.date() and (now-anchor.to_pydatetime()-timedelta(minutes=5)).total_seconds()<=900 else 'STALE' if market_open else 'CLOSED'
+    status=regular_status(anchor+pd.Timedelta(minutes=5),now)
     rows=[];series={}
     for symbol,f in prepared.items():
         if symbol=='^VIX':continue

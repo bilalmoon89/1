@@ -86,6 +86,15 @@ def render_intraday_context():
             if failures:st.caption(f'Intraday coverage: {len(frames)} series · {len(failures)} unavailable')
         except Exception as exc:
             st.caption(f'Intraday feed unavailable: {type(exc).__name__}. No daily substitute is shown.')
+    from session_validity import session_clock
+    clock=session_clock(NOW())
+    if not clock['open']:
+        st.info(f"Regular-session review · latest session {clock['date']}. Extended-hours prices are not included. Check the dates below; CLOSED alone does not establish freshness.")
+    if context.get('status') in ('STALE','CLOSE PENDING'):
+        st.warning('Latest regular-session bars are stale or the closing data is still arriving. The displayed timestamp is the provider data time, not a fresh after-hours quote.')
+    expected=clock['date']
+    if NOW()>=clock['close'].to_pydatetime()+timedelta(minutes=15) and snap.get('asof') and str(snap['asof'])[:10]<str(expected):
+        st.warning(f"Daily research is through {snap['asof']}; the latest completed session is {expected}. Run the scan again to refresh the research.")
     st.session_state.intraday_context=context
     st.markdown(overview(snap,get_plans(),st.session_state.frozen,context),unsafe_allow_html=True)
     themes=analyze_rotation(theme_history,context,targets) if targets else pd.DataFrame()

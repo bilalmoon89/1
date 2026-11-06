@@ -88,7 +88,7 @@ def overview(snap, plans, frozen, intraday=None):
     state=intraday.get('status','UNAVAILABLE')
     description=f'{above}/{len(covered)} benchmark ETFs above session VWAP. Sector leadership is ranked versus SPY today.' if len(covered) else 'Intraday benchmark history unavailable. No daily readings are substituted.'
     bar=intraday.get('asof') or 'Unavailable'
-    regime=f'<div class="regime-strip"><span class="pill amber">INTRADAY · {e(state)}</span><div><b>{e(description)}</b><small>Completed 5-minute bar · {e(bar)} · Yahoo provider delay · 60-second refresh.</small></div><span class="strip-right">SESSION CONTEXT</span></div>'
+    regime=f'<div class="regime-strip"><span class="pill amber">INTRADAY · {e(state)}</span><div><b>{e(description)}</b><small>Regular-session data only · {e(bar)} · Yahoo provider delay · 60-second refresh. Extended-hours quotes are not included.</small></div><span class="strip-right">SESSION CONTEXT</span></div>'
     quotes=[]
     for symbol in ['^VIX']+list(DISPLAY_BENCHMARKS):
         matches=intra[intra.Symbol==symbol] if not intra.empty else pd.DataFrame()
@@ -101,8 +101,8 @@ def overview(snap, plans, frozen, intraday=None):
         if state!='CURRENT':trend=state
         quote_tone=('down' if change>0 else 'up' if change<0 else 'muted') if symbol=='^VIX' and r is not None and pd.notna(change) else tone(change)
         stamp=str(r.get('Bar close','')) if r is not None else ''
-        timestamp=(stamp[11:16]+' ET') if 'T' in stamp else stamp
-        extra=f'<small class="quote-asof">As of {e(timestamp)}</small>' if symbol=='^VIX' and timestamp else ''
+        timestamp=(stamp[:10]+' '+stamp[11:16]+' ET') if 'T' in stamp else stamp
+        extra=f'<small class="quote-asof">As of {e(timestamp)}</small>' if timestamp else ''
         quotes.append(f'<div class="quote"><div><b>{e("VIX" if symbol=="^VIX" else symbol)}</b> <span class="pill {quote_tone}">{trend}</span><strong>{last}</strong>{extra}</div><div class="quote-change {quote_tone}">{num(change,"%")}<small>vs previous close</small></div>{spark(intraday.get("frames",{}).get(symbol),"#37ca94" if quote_tone=="up" else "#ed6e7c","Completed 5-minute RTH closes")}</div>')
     sector=intra[intra.Symbol.isin(SECTORS)].sort_values('Vs SPY pp',ascending=False) if not intra.empty else pd.DataFrame()
     rows=[]
