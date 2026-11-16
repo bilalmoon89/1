@@ -7,10 +7,10 @@ from datetime import datetime
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 import io
-import csv
 import pandas as pd
 import numpy as np
-from crescent_engine import SECTORS, BENCHMARKS, CROSS_ASSETS, normalise
+from crescent_engine import SECTORS, CROSS_ASSETS, normalise
+from sector_map import yahoo_symbol, UNCLASSIFIED
 
 ET=ZoneInfo('America/New_York')
 
@@ -39,18 +39,22 @@ def seed_universe(sectors, pins=(), per_sector=8, limit=140):
 
 
 def tv_leadership(limit=120):
-    """Best-effort screener candidate discovery. Never infer permissions from failure."""
+    """Best-effort screener candidate discovery. Never infer permissions from failure.
+
+    Returns (symbols, note, sectors) where sectors maps each discovered symbol to
+    TradingView's sector label, so names outside stocks.csv can still be ranked.
+    """
     from tradingview_screener import Query,col
     q=(Query().set_markets('america')
        .select('name','close','volume','sector','Perf.W','Perf.1M','EMA21','EMA50','market_cap_basic')
        .where(col('close')>5,col('market_cap_basic')>2_000_000_000,col('volume')>250_000)
        .order_by('Perf.1M',ascending=False).limit(limit*3))
-    total,frame=q.get_scanner_data()
-    if frame is None or frame.empty:return [],'TradingView screener returned no rows.'
+    total,frame=q.get_scanner_data(timeout=12)
+    if frame is None or frame.empty:return [],'TradingView screener returned no rows.',{}
     # Sector-balanced from ranked results. Do not overfit technology concentration.
     if 'sector' not in frame.columns or 'name' not in frame.columns:
-        return [],'TradingView screener returned incomplete columns.'
-    counts={};out=[]
+        return [],'TradingView screener returned incomplete columns.',{}
+    counts={};out=[];sectors={}
     for _,row in frame.iterrows():
         symbol=str(row['name']).strip().upper()
         sector=str(row['sector'])
@@ -58,8 +62,27 @@ def tv_leadership(limit=120):
         if counts.get(sector,0)>=max(6,int(limit/9)):continue
         if symbol not in out:
             out.append(symbol);counts[sector]=counts.get(sector,0)+1
+            if sector and sector!='nan':sectors[symbol]=sector
         if len(out)>=limit:break
-    return out,f'Screener candidates: {len(out)} of approximately {total} market results; sector-balanced selection.'
+    return out,f'Screener candidates: {len(out)} of approximately {total} market results; sector-balanced selection.',sectors
+
+
+def resolve_sectors(symbols):
+    """Best-effort TradingView sector lookup for symbols without a stocks.csv sector."""
+    symbols=[s for s in dict.fromkeys(symbols) if s]
+    if not symbols:return {}
+    try:
+        from tradingview_screener import Query,col
+        _,frame=(Query().set_markets('america').select('name','sector')
+            .where(col('name').isin(symbols)).limit(len(symbols)*2).get_scanner_data(timeout=8))
+    except Exception:
+        return {}
+    out={}
+    for _,row in frame.iterrows():
+        name=str(row['name']).upper();sector=row.get('sector')
+        if name in symbols and isinstance(sector,str) and sector and sector not in UNCLASSIFIED:
+            out.setdefault(name,sector)
+    return out
 
 
 def _extract_symbol(df,symbol,all_symbols):
@@ -75,21 +98,25 @@ def _extract_symbol(df,symbol,all_symbols):
     return normalise(f)
 
 
-def yahoo_daily(symbols,period='1y',chunk_size=14,progress=None):
+def yahoo_daily(symbols,period='1y',chunk_size=40,progress=None):
     """Download completed-session candidates, returning per-symbol failures, no false coverage.
     The caller removes incomplete current-day data with complete_daily().
+    Share-class tickers are requested in Yahoo form (BRK-B) and returned under the
+    original symbol (BRK.B).
     """
     import yfinance as yf
     symbols=list(dict.fromkeys(str(s).strip().upper() for s in symbols if str(s).strip()))
     frames={};fail={}
     for at in range(0,len(symbols),chunk_size):
         group=symbols[at:at+chunk_size]
+        wanted={yahoo_symbol(s):s for s in group}
+        request=list(wanted)
         try:
-            data=yf.download(tickers=group,period=period,interval='1d',auto_adjust=False,
+            data=yf.download(tickers=request,period=period,interval='1d',auto_adjust=False,
                              group_by='ticker',threads=True,progress=False,actions=False,
                              timeout=24)
-            for symbol in group:
-                frame=_extract_symbol(data,symbol,group)
+            for ysym,symbol in wanted.items():
+                frame=_extract_symbol(data,ysym,request)
                 if len(frame)<65:fail[symbol]=f'Only {len(frame)} usable daily bars'
                 else:frames[symbol]=frame
         except Exception as exc:
@@ -100,7 +127,7 @@ def yahoo_daily(symbols,period='1y',chunk_size=14,progress=None):
 
 def yahoo_five_minute(symbol,days='10d',extended=False):
     import yfinance as yf
-    raw=yf.Ticker(symbol).history(period=days,interval='5m',prepost=extended,auto_adjust=False,actions=False)
+    raw=yf.Ticker(yahoo_symbol(symbol)).history(period=days,interval='5m',prepost=extended,auto_adjust=False,actions=False)
     if raw is None or len(raw)<12:raise ValueError(f'Insufficient 5m bars for {symbol}')
     f=raw.copy()
     if isinstance(f.columns,pd.MultiIndex):f.columns=f.columns.get_level_values(0)

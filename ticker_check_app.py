@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 from liquid_data import bounded_call
 from ticker_check import financial_quarters,fundamental_review,technical_review,valuation_history,quote_review,number
-from terminal_view import CSS,header,table,e,money
+from terminal_view import CSS,header,table
 from ticker_check_view import CSS as TICKER_CSS,dashboard
 from ticker_financials import revenue_comparisons,rule_of_40,reconcile_revenue
 
@@ -51,7 +51,7 @@ def main():
     with st.form('ticker_lookup'):
         left,right=st.columns([4,1],vertical_alignment='bottom')
         symbol=left.text_input('Ticker',value=st.query_params.get('symbol','AAPL'),placeholder='e.g. NVDA, COHR, LITE',label_visibility='collapsed').strip().upper()
-        with right:run=st.form_submit_button('Check ticker',type='primary',use_container_width=True)
+        with right:run=st.form_submit_button('Check ticker',type='primary',width='stretch')
     if run:
         if not re.fullmatch(r'[A-Z][A-Z0-9.\-]{0,14}',symbol):st.error('Enter one valid stock ticker.');return
         with st.spinner('Checking reported financials, valuation and completed daily/weekly trends…'):

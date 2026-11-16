@@ -1,26 +1,40 @@
 """Bounded, small-batch provider calls for the standalone liquid scan."""
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import threading
 
-_pool=ThreadPoolExecutor(max_workers=2,thread_name_prefix='liquid-feed')
 BATCH_SIZE=12
 
 
 def bounded_call(function,*args,timeout=12):
-    future=_pool.submit(function,*args)
-    try:return future.result(timeout=timeout)
-    except TimeoutError:
-        future.cancel()
-        raise TimeoutError(f'Provider exceeded {timeout}s request limit') from None
+    """Run a provider call with a wall-clock limit.
+
+    Each call gets its own daemon thread, so a provider request that hangs past its
+    limit can never occupy a shared worker and block later requests (a shared
+    2-worker pool did exactly that). The abandoned thread ends when the provider's
+    own network timeout fires.
+    """
+    box={}
+    def run():
+        try:box['value']=function(*args)
+        except BaseException as exc:box['error']=exc
+    worker=threading.Thread(target=run,name='crescent-feed',daemon=True)
+    worker.start();worker.join(timeout)
+    if worker.is_alive():
+        raise TimeoutError(f'Provider exceeded {timeout}s request limit')
+    if 'error' in box:raise box['error']
+    return box.get('value')
 
 
 def _download(symbols):
     import yfinance as yf
     from crescent_feeds import _extract_symbol
-    raw=yf.download(list(symbols),period='1y',interval='1d',auto_adjust=False,
+    from sector_map import yahoo_symbol
+    wanted={yahoo_symbol(s):s for s in symbols}
+    request=list(wanted)
+    raw=yf.download(request,period='1y',interval='1d',auto_adjust=False,
         group_by='ticker',threads=4,progress=False,actions=False,timeout=8)
     frames={};failures={}
-    for symbol in symbols:
-        frame=_extract_symbol(raw,symbol,symbols)
+    for ysym,symbol in wanted.items():
+        frame=_extract_symbol(raw,ysym,request)
         if len(frame)>=200:frames[symbol]=frame
         else:failures[symbol]=f'{len(frame)} usable daily bars; 200 required'
     return frames,failures

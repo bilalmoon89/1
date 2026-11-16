@@ -1,9 +1,8 @@
 """Read-only intraday context, independent of the existing entry/ranking engine."""
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 import pandas as pd
 from crescent_engine import ET, SECTORS, finite, normalise
 
-from market_symbols import DISPLAY_BENCHMARKS
 from session_validity import regular_status
 
 
@@ -54,7 +53,6 @@ def vix_reading(prepared,daily,now):
         close=float(frame.Close.iloc[-1])
         previous_close=float(previous.Close.iloc[-1]) if not previous.empty else None
         age=max(0,(now-stamp.to_pydatetime()).total_seconds())
-        opened=now.weekday()<5 and time(9,30)<=now.time()<time(16)
         status=regular_status(stamp,now,max_age_seconds=1800)
         if status=='CURRENT' and age>600:status='DELAYED'
         return {'Symbol':'^VIX','Name':'VIX','Last':close,
@@ -87,7 +85,6 @@ def session_rows(frames,daily,now=None):
         vix,series=vix_reading(prepared,daily,now)
         return {'rows':pd.DataFrame([vix]) if vix else pd.DataFrame(),'frames':{'^VIX':series} if vix else {},'asof':None,'session':None,'status':'UNAVAILABLE'}
     anchor=spy.index[-1];day=anchor.date()
-    market_open=now.weekday()<5 and time(9,30)<=now.time()<time(16)
     status=regular_status(anchor+pd.Timedelta(minutes=5),now)
     rows=[];series={}
     for symbol,f in prepared.items():

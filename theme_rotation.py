@@ -23,8 +23,9 @@ def missing_theme_members(loaded):
     return sorted({s for t in related_themes(loaded) for s in t['symbols']}-loaded)
 
 
-def analyze_rotation(daily,intraday,themes=None):
-    metrics={s:snapshot(f) for s,f in daily.items()}
+def analyze_rotation(daily,intraday,themes=None,metrics=None):
+    """`metrics` may be passed in (precomputed once per scan) to avoid recomputing snapshots."""
+    if metrics is None:metrics={s:snapshot(f) for s,f in daily.items()}
     spy=metrics.get('SPY')
     if not spy:return pd.DataFrame()
     live=intraday.get('rows',pd.DataFrame())

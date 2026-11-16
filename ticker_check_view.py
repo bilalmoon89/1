@@ -1,6 +1,5 @@
 """Compact read-only presentation of ticker-check results."""
-import pandas as pd
-from terminal_view import e,table
+from terminal_view import e
 from liquid_table import leaders_table
 from ticker_check import number
 

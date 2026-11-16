@@ -1,7 +1,7 @@
 """Explicit research rules for an individual ticker; no broker/order actions."""
 import math
 import pandas as pd
-from crescent_engine import complete_daily,normalise,_target_from_past
+from crescent_engine import complete_daily,normalise,plan_target,atr14
 from session_validity import calendar,session_clock
 
 
@@ -106,8 +106,8 @@ def high_tight_flag(frame):
 def technical_review(raw,now):
     f=complete_daily(raw,now)
     if len(f)<200:return {'decision':'NO GO · DATA INCOMPLETE','reason':'200 completed daily bars required.','averages':pd.DataFrame(),'frame':f}
-    close=f.Close;price=float(close.iloc[-1]);tr=pd.concat([f.High-f.Low,(f.High-close.shift()).abs(),(f.Low-close.shift()).abs()],axis=1).max(axis=1)
-    atr=float(tr.tail(14).mean());checks=[]
+    close=f.Close;price=float(close.iloc[-1])
+    atr=atr14(f);checks=[]  # Same Wilder ATR as the scanner, so stops agree across pages.
     for n in (9,21,50):
         ema=close.ewm(span=n,adjust=False).mean()
         above=price>=ema.iloc[-1]
@@ -140,10 +140,14 @@ def technical_review(raw,now):
         elif abs(price-ema21)<=1.5*atr and checks[1]['State']=='TESTED & HELD':
             entry=float(f.High.iloc[-1])+.05*atr;stop=float(f.Low.tail(5).min())-.15*atr
         if entry and stop and entry>stop:
-            target=_target_from_past(f,entry,1,atr)
+            # Open-space breakouts (e.g. high tight flags) get a labelled projected 3R target
+            # instead of being excluded for having no older resistance above them.
+            target,kind=plan_target(f,entry,stop,1,atr,multiple=3.0)
             rr=(target-entry)/(entry-stop) if target else None
             decision='CONDITIONAL TRADE PLAN' if rr and rr>=2 and entry-stop<=3*atr else 'WATCH · RISK/REWARD UNVERIFIED'
-            reason='Breakout trigger and structural invalidation are conditional. A known resistance target and >=2R are required; no automatic entry.'
+            reason=('Breakout trigger and structural invalidation are conditional. '
+                +('Target is a projected 3R in open space (no overhead resistance); manage with a trailing stop.' if kind=='PROJECTED'
+                  else 'A known resistance target and >=2R are required; no automatic entry.'))
         else:decision='WAIT · NO DEFINED SETUP';reason='Trend alone does not establish a low-risk entry or stop.'
     return {'decision':decision,'reason':reason,'price':price,'asof':str(f.index[-1].date()),'averages':pd.DataFrame(checks),
         'stage':stage,'pattern':pattern,'entry':entry,'stop':stop,'target':target,'rr':rr,'atr':atr,'frame':f,'weekly':weeks}

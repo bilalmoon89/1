@@ -1,10 +1,8 @@
 """Offline regression tests; they do not certify Yahoo or Streamlit deployment."""
-from datetime import datetime, time
+from datetime import datetime
 from zoneinfo import ZoneInfo
-import io
 import numpy as np
 import pandas as pd
-import pytest
 from crescent_engine import (complete_daily,normalise,snapshot,regime,Plan,make_plans,
     rank_plans,ten_minute_bars,intraday_vwap,live_check)
 from crescent_feeds import generate_demo,symbols_from_file,seed_universe,read_events,risk_events

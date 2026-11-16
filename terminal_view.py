@@ -75,12 +75,12 @@ def panel(title, body, meta=''):
     return f'<section class="terminal-panel"><div class="panel-head"><b><span class="grip">⠿</span> {e(title)}</b><span>{e(meta)}</span></div><div class="panel-body">{body}</div></section>'
 
 def header(updated=None,source='Yahoo Finance'):
-    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● {e(source)}</span><a class="liquid-link" href="?view=liquid" target="_blank" rel="noopener noreferrer">↗ Liquid Uptrend</a><a class="liquid-link" href="?view=ticker" target="_blank" rel="noopener noreferrer">↗ Ticker Check</a><a class="terminal-home" href="?view=terminal" target="_self">Terminal</a><span class="build-pill">BETA · 7.7.3</span></div></div>'
+    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● {e(source)}</span><a class="liquid-link" href="?view=setups" target="_blank" rel="noopener noreferrer">↗ VCP &amp; PEG</a><a class="liquid-link" href="?view=liquid" target="_blank" rel="noopener noreferrer">↗ Liquid Uptrend</a><a class="liquid-link" href="?view=ticker" target="_blank" rel="noopener noreferrer">↗ Ticker Check</a><a class="terminal-home" href="?view=terminal" target="_self">Terminal</a><span class="build-pill">BETA · 7.7.3</span></div></div>'
 
 def overview(snap, plans, frozen, intraday=None):
     intraday=intraday or {}
     intra=intraday.get("rows",pd.DataFrame())
-    ctx=snap['context'];frames=snap['frames'];posture=ctx.get('posture','UNKNOWN')
+    ctx=snap['context'];posture=ctx.get('posture','UNKNOWN')
     asof=snap.get('asof') or 'Not loaded'
     market=intra[intra.Symbol.isin(['SPY','QQQ','IWM','RSP','DIA'])] if not intra.empty else pd.DataFrame()
     covered=market[market['Vs VWAP %'].notna()] if not market.empty else pd.DataFrame()

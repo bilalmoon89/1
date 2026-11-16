@@ -29,7 +29,7 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now,quote_lo
     custom=st.text_input('Additional tickers',placeholder='Add symbols beyond the stock list, e.g. COHR, LITE, IONQ',key='lu_extra')
     st.caption('Intraday: session price, range, SMA and VWAP from TradingView; 20D volume and 50D dollar volume remain completed-session averages. Feed delay and quote time are shown. After the close, the current regular-session snapshot is shown; before the open or on non-trading days, the latest completed regular session is labelled with its date. Extended-hours quotes are not included. Custom tickers also pass every standard filter.')
     if scope.startswith('TradingView US'):st.caption('US primary stocks above SMA50 and SMA200, ranked by 90D average volume; discovery is capped at 1,500. Exact liquidity, ADR and exclusions are checked afterward. A first scan can take several minutes; partial matches appear while it runs.')
-    right.button('Restore standard preset',on_click=reset_preset,use_container_width=True)
+    right.button('Restore standard preset',on_click=reset_preset,width='stretch')
     with st.expander('Filters / exclusions · standard preset',expanded=False):
         first=st.columns(3)
         volume=first[0].number_input('Average volume 20D >',min_value=0.0,step=100_000.0,key='lu_volume',format='%.0f')
@@ -44,7 +44,7 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now,quote_lo
         excluded=one.text_input('Exclude tickers',placeholder='e.g. ABC, XYZ',key='lu_excluded_tickers')
         keywords=two.text_input('Exclude other industries · keywords',placeholder='e.g. banks, insurance',key='lu_excluded_industries')
         st.caption('Dollar volume = mean(close × volume) over 50 sessions. ADR N = (mean high N − mean low N) ÷ latest close × 100. Industry classification uses a bounded TradingView request, including diagnostics/research where identified; unverified industries are held out while this exclusion is enabled.')
-    run=st.button('Run Liquid Uptrend',type='primary',use_container_width=True)
+    run=st.button('Run Liquid Uptrend',type='primary',width='stretch')
     if run:
         import re
         extras=[x.upper() for x in re.split(r'[\s,;]+',custom.strip()) if re.fullmatch(r'[A-Za-z][A-Za-z0-9.\-]{0,14}',x)]

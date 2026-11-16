@@ -15,36 +15,49 @@ if st.query_params.get('view')=='liquid':
     import_local('liquid_app').main()
     st.stop()
 
-import io
+if st.query_params.get('view')=='setups':
+    import_local('setups_app').main()
+    st.stop()
+
 import json
 from datetime import datetime,time,timedelta
-from html import escape
-from zoneinfo import ZoneInfo
 import pandas as pd
 
-from crescent_engine import (ET,SECTORS,BENCHMARKS,CROSS_ASSETS,DEFAULT_WATCH,ETF_TRADE_CANDIDATES,LEVERAGED_ETFS,Plan,
-    complete_daily,normalise,snapshot,regime,make_plans,rank_plans,live_check,
-    money,finite,mock_regime_note,preopen_assessment)
-from crescent_feeds import (symbols_from_file,seed_universe,tv_leadership,
+from crescent_engine import (ET,SECTORS,BENCHMARKS,CROSS_ASSETS,DEFAULT_WATCH,ETF_TRADE_CANDIDATES,
+    complete_daily,snapshot,regime,make_plans,rank_plans,live_check,money,finite)
+from crescent_feeds import (symbols_from_file,seed_universe,tv_leadership,resolve_sectors,
     yahoo_daily,yahoo_five_minute,read_events,risk_events,news_rss)
-from crescent_ui import card
+from sector_map import ETF_SECTORS,UNCLASSIFIED,proxy_for
+from session_validity import market_is_open
 _view=import_local('terminal_view')
 CSS,header,overview,opportunity,table,e,theme_detail_table=(_view.CSS,_view.header,_view.overview,_view.opportunity,_view.table,_view.e,_view.theme_detail_table)
-from intraday_context import fetch_intraday, session_rows, tradingview_quotes, DISPLAY_BENCHMARKS
-from theme_rotation import analyze_rotation, theme_symbols, related_themes, missing_theme_members
+from intraday_context import fetch_intraday, session_rows, tradingview_quotes
+from market_symbols import DISPLAY_BENCHMARKS
+from theme_rotation import analyze_rotation, related_themes, missing_theme_members
 from watchtower import follow_plan, focus_plan, FOLLOW_LIMIT, FOCUS_LIMIT
 from crescent_charts import candles
 from rotation_themes import THEMES
-from cloud_engine import bar_session_resample,scan_symbol
 
 st.set_page_config(page_title='Crescent Trade Terminal — BETA',page_icon='🌙',
                    layout='wide',initial_sidebar_state='collapsed')
 NOW=lambda:datetime.now(ET)
 
 
+class PartialDownload(Exception):
+    pass
+
+
 @st.cache_data(ttl=1200,show_spinner=False)
+def _successful_daily(symbols_tuple):
+    frames,fail=yahoo_daily(symbols_tuple,period='1y')
+    # Raising skips the cache, so a rate-limited scan is retried on the next press.
+    if fail:raise PartialDownload((frames,fail))
+    return frames,fail
+
+
 def cached_daily(symbols_tuple):
-    return yahoo_daily(symbols_tuple,period='1y')
+    try:return _successful_daily(symbols_tuple)
+    except PartialDownload as exc:return exc.args[0]
 
 
 @st.cache_data(ttl=105,show_spinner=False)
@@ -53,8 +66,21 @@ def cached_intraday(symbol,extended=False):
 
 
 @st.cache_data(ttl=55,show_spinner=False)
-def cached_context_bars(symbols):
+def _live_context_bars(symbols):
     return fetch_intraday(symbols)
+
+
+@st.cache_data(ttl=1800,show_spinner=False)
+def _closed_context_bars(symbols,session):
+    return fetch_intraday(symbols)
+
+
+def cached_context_bars(symbols):
+    """Minute-level refresh in session; one download per 30 min when the market is closed."""
+    now=NOW()
+    if market_is_open(now):return _live_context_bars(symbols)
+    from session_validity import session_clock
+    return _closed_context_bars(symbols,str(session_clock(now)['date']))
 
 
 @st.cache_data(ttl=60,show_spinner=False)
@@ -62,8 +88,12 @@ def cached_tv_quotes(symbols):
     return tradingview_quotes(symbols)
 
 
-@st.fragment(run_every='60s')
 def render_intraday_context():
+    """Auto-refresh every 60 s only while the NYSE regular session is open."""
+    st.fragment(run_every='60s' if market_is_open(NOW()) else None)(_intraday_context_body)()
+
+
+def _intraday_context_body():
     snap=st.session_state.market_snapshot
     context={'rows':pd.DataFrame(),'status':'UNAVAILABLE'}
     theme_history=dict(snap['frames'])
@@ -81,6 +111,7 @@ def render_intraday_context():
                         st.session_state.theme_extra_failures=failed
                 except Exception as exc:st.caption(f'Theme member history unavailable: {type(exc).__name__}. Coverage stays partial.')
             st.session_state.theme_history_key=history_key
+            st.session_state.theme_metrics=None
         theme_history.update(st.session_state.get('theme_extra_history',{}))
         try:
             members=sorted({s for t in targets for s in t['symbols'] if s in theme_history})
@@ -101,7 +132,10 @@ def render_intraday_context():
         st.warning(f"Daily research is through {snap['asof']}; the latest completed session is {expected}. Run the scan again to refresh the research.")
     st.session_state.intraday_context=context
     st.markdown(overview(snap,get_plans(),st.session_state.frozen,context),unsafe_allow_html=True)
-    themes=analyze_rotation(theme_history,context,targets) if targets else pd.DataFrame()
+    # Daily metrics change only when a new scan lands; compute them once per scan, not every minute.
+    if st.session_state.get('theme_metrics') is None or set(st.session_state.theme_metrics)!=set(theme_history):
+        st.session_state.theme_metrics={s:snapshot(f) for s,f in theme_history.items()}
+    themes=analyze_rotation(theme_history,context,targets,metrics=st.session_state.theme_metrics) if targets else pd.DataFrame()
     st.session_state.theme_rotation=themes
     render_theme_rotation(themes)
 
@@ -121,12 +155,6 @@ def init_state():
         'source_caption':'','universe_caption':'','scan_errors':[],'include_etfs':True}
     for k,v in defaults.items():
         if k not in st.session_state:st.session_state[k]=v
-    previous=st.session_state.get('market_snapshot')
-    if previous and 'SIMULATED' in previous.get('source',''):
-        st.session_state.market_snapshot=None
-        st.session_state.initial_fetch_attempted=False
-        st.session_state.frozen={k:v for k,v in st.session_state.frozen.items() if 'SIMULATED' not in v.get('source','')}
-        st.session_state.live_result={}
     st.session_state.data_mode='Yahoo Finance — beta'
     for item in st.session_state.frozen.values():
         if len(st.session_state.following)<FOLLOW_LIMIT:follow_plan(st.session_state.following,item)
@@ -145,10 +173,13 @@ def all_symbols(pins,mode,breadth,with_tv):
     else:
         selection=seed_universe(sectors,pinlist,per_sector=12 if breadth=='Balanced 120' else 6,limit=lim)
         explanation='Sector-balanced subset of original stock universe (not a full-market leadership scan).'
+    # Your own list is always scanned, even tickers outside stocks.csv (sector looked up at scan time).
+    selection=list(dict.fromkeys(pinlist+selection))
     warnings=[]
     if with_tv:
         try:
-            discovered,note=tv_leadership(limit=120)
+            discovered,note,tv_sectors=tv_leadership(limit=120)
+            st.session_state.tv_sectors=tv_sectors
             if discovered:
                 # Priority pins + TV leaders + sector-balanced fallback; never technology-only focus.
                 selection=list(dict.fromkeys(pinlist+discovered+selection))[:lim]
@@ -167,26 +198,27 @@ def install_snapshot(frames,source,fail):
     daily={s:complete_daily(f,effective) for s,f in frames.items() if f is not None and len(f)}
     context=regime(daily,effective)
     universe=symbols_from_file('stocks.csv')
-    etfs=pd.read_csv('etfs.csv').fillna('')
-    etf_map=dict(zip(etfs.Symbol.astype(str),etfs.Sector.astype(str)))
-    etf_map.update({'XBI':'Health Care','IHI':'Health Care','KRE':'Financials','XRT':'Consumer Discretionary',
-       'SMH':'Information Technology','GDX':'Materials','GLD':'Materials','TLT':'Bonds','IBIT':'Crypto'})
     spy=snapshot(daily.get('SPY',pd.DataFrame()))
-    plans=[];metrics=[]
+    plans=[];metrics=[];skipped=[]
     sector_rs={}
     sf=context['sectors']
     if not sf.empty:
         sector_rs=dict(zip(sf.Symbol,sf['Vs SPY 21D pp']))
-    proxies={'Information Technology':'XLK','Technology':'XLK','Health Care':'XLV','Healthcare':'XLV',
-        'Consumer Staples':'XLP','Utilities':'XLU','Energy':'XLE','Financials':'XLF',
-        'Industrials':'XLI','Materials':'XLB','Consumer Discretionary':'XLY',
-        'Communication Services':'XLC','Real Estate':'XLRE','Biotech':'XLV',
-        'Semiconductors':'XLK','Precious Metals':'XLB','Healthcare':'XLV'}
+    # Asset-class proxies (GLD, TLT, IBIT, XBI, SMH ...) are not SPDR sectors; measure them directly.
+    if spy:
+        for proxy in set(filter(None,(proxy_for(x) for x in list(ETF_SECTORS.values())+['Biotech','Semiconductors']))):
+            if proxy not in sector_rs:
+                pm=snapshot(daily.get(proxy,pd.DataFrame()))
+                if pm and pm['asof']==spy['asof'] and finite(pm['r21']):sector_rs[proxy]=pm['r21']-spy['r21']
+    known=dict(universe);known.update(ETF_SECTORS);known.update(st.session_state.get('tv_sectors',{}))
+    unresolved=[s for s in daily if s not in SECTORS and s not in BENCHMARKS and s not in CROSS_ASSETS
+        and (known.get(s) in UNCLASSIFIED or s not in known)]
+    if unresolved:known.update(resolve_sectors(unresolved))
     for symbol,f in daily.items():
         if symbol in SECTORS or symbol in BENCHMARKS or symbol in CROSS_ASSETS:continue
-        sector=universe.get(symbol)
-        if sector is None and symbol in ETF_TRADE_CANDIDATES:sector=etf_map.get(symbol,'Unknown')
-        if sector is None:continue
+        sector=known.get(symbol)
+        if sector is None:
+            skipped.append(symbol);continue
         m=snapshot(f)
         if m and spy and m['asof']==spy['asof']:
             metrics.append({'Symbol':symbol,'Sector':sector,'Price':round(m['price'],2),
@@ -194,16 +226,14 @@ def install_snapshot(frames,source,fail):
                 'ATR14':round(m['atr'],2),'Dollar volume 20D':m['dvol'],
                 '21EMA':round(m['ema21'],2),'Trend':'UP' if m['trend_up'] else 'DOWN' if m['trend_down'] else 'MIXED',
                 'As of':m['asof']})
-        candidate_plans=make_plans(symbol,f,spy,sector,sector_rs.get(proxies.get(sector)),
-                    context['posture'],now=effective,source=source)
-        if symbol in LEVERAGED_ETFS:
-            for p in candidate_plans:
-                p.status='WATCH';p.blocker='Leveraged ETF: independent volatility and leverage review required.'
-        plans.extend(candidate_plans)
+        proxy=proxy_for(sector)
+        rs=None if proxy==symbol else sector_rs.get(proxy)
+        if proxy==symbol and m and spy and finite(m['r21']) and finite(spy['r21']):rs=m['r21']-spy['r21']
+        plans.extend(make_plans(symbol,f,spy,sector,rs,context['posture'],now=effective,source=source))
     st.session_state.market_snapshot={'frames':daily,'context':context,'metrics':pd.DataFrame(metrics),
         'source':source,'asof':context['asof'],'updated_at':now.isoformat(),
         'attempted':len(frames)+len(fail),'loaded':len(daily),
-        'comparable':sum(1 for f in daily.values() if (snapshot(f) and snapshot(f)['asof']==context['asof'])),
+        'comparable':len(metrics),'skipped':skipped,
         'fail':fail}
     st.session_state.plans=rank_plans(plans)
     st.session_state.all_plans=rank_plans(plans,max_per_sector=max(2,len(plans)))
@@ -243,7 +273,7 @@ def event_panel():
     else:
         now=NOW().replace(tzinfo=None);soon=e[(e['When ET']>=now-timedelta(days=1)) & (e['When ET']<=now+timedelta(days=10))]
         if soon.empty:st.info('No events in the next ten days in the uploaded calendar. This does not certify that no events exist.')
-        else:dark_frame(soon[['When ET','Title','Impact','Tickers','Confirmed','Source']],hide_index=True,use_container_width=True)
+        else:dark_frame(soon[['When ET','Title','Impact','Tickers','Confirmed','Source']],hide_index=True,width='stretch')
 
 
 
@@ -269,25 +299,20 @@ def live_result(plan):
     event_verified=st.checkbox('I checked upcoming earnings and material events for this ticker',value=False,key='check_event_'+plan['id'])
     st.caption('The current price and VWAP are read only when you explicitly request the live check. The button does not place orders.')
     if st.button(f'Check {sym} — completed 10m & VWAP',type='primary',key='checklive_'+plan['id']):
-        if 'SIMULATED' in st.session_state.market_snapshot['source']:
-            st.session_state.live_result[plan['id']]={'status':'DEMO','why':'Live confirmation disabled in simulated mode. Switch to Yahoo data and refresh research.'}
-        elif now.weekday()>=5 or not (time(9,30)<=now.time()<time(16,0)) or event_block or plan.get('status')!='ARMED':
+        if not market_is_open(now) or event_block or plan.get('status')!='ARMED':
             st.session_state.live_result[plan['id']]=live_check(plan,None,now=now,manual_event_block=event_block)
         else:
             try:
                 five=cached_intraday(sym)
-                proxy_map={'Health Care':'XLV','Healthcare':'XLV','Consumer Staples':'XLP','Utilities':'XLU',
-                    'Energy':'XLE','Information Technology':'XLK','Technology':'XLK','Financials':'XLF',
-                    'Industrials':'XLI','Materials':'XLB','Consumer Discretionary':'XLY',
-                    'Communication Services':'XLC','Real Estate':'XLRE'}
-                sector_proxy=proxy_map.get(plan['sector'])
+                sector_proxy=proxy_for(plan['sector'])
+                if sector_proxy==sym:sector_proxy=None
                 sector_feed=cached_intraday(sector_proxy) if sector_proxy else None
                 # Market context is optional/diagnostic, sector confirmation is required.
                 try:spy_feed=cached_intraday('SPY')
                 except Exception:spy_feed=None
                 st.session_state.live_result[plan['id']]=live_check(plan,five,now=now,
                     opening_cutoff=time.fromisoformat(st.session_state.get('cutoff','09:50')),
-                    manual_event_block=event_block,sector_five=sector_feed,require_sector=True,market_five=spy_feed)
+                    manual_event_block=event_block,sector_five=sector_feed,require_sector=sector_proxy is not None,market_five=spy_feed)
             except Exception as exc:
                 st.session_state.live_result[plan['id']]={'status':'STALE','why':f'Intraday feed unavailable: {type(exc).__name__}: {str(exc)[:180]}'}
     if plan['id'] in st.session_state.live_result:
@@ -299,7 +324,7 @@ def live_result(plan):
         try:
             seconds_since=(NOW()-datetime.fromisoformat(result.get('checked_at',now.isoformat()))).total_seconds()
         except Exception:seconds_since=1_000_000
-        if seconds_since>180 or NOW().weekday()>=5 or not (time(9,30)<=NOW().time()<time(16,0)):
+        if seconds_since>180 or not market_is_open(NOW()):
             state='STALE';why='Previous live check expired or cash session closed. Refresh to reassess; do not trade from this old status.'
         if state=='READY' and not event_verified:state='BLOCKED';why='Earnings/event verification not acknowledged. '+why
         if state=='READY':st.success(f'READY FOR MANUAL REVIEW — {why}')
@@ -329,28 +354,25 @@ def manual_manage(plan):
         if daily_m:
             st.caption(f"Last completed daily close {money(daily_m['price'])} · 21 EMA {money(daily_m['ema21'])} · as of {daily_m['asof']}. Daily trend context, not a stop execution feed.")
         if st.button('Check underlying against frozen stop / target',key='manage_quote_'+pid):
-            if 'SIMULATED' in st.session_state.market_snapshot['source']:
-                st.info('Price management check disabled in synthetic demo mode.')
-            else:
-                try:
-                    quote=cached_intraday(symbol)
-                    if quote.empty:raise ValueError('No intraday quote')
-                    q=float(quote.Close.iloc[-1]);qt=quote.index[-1]
-                    if qt.tzinfo is None:raise ValueError('Missing quote timezone')
-                    qt=qt.tz_convert(ET)
-                    age=(NOW()-qt.to_pydatetime()).total_seconds()/60
-                    if age>30 or qt.date()!=NOW().date():
-                        st.warning(f'Last known underlying close {money(q)} is STALE (bar {qt}). Do not infer current stop status.')
+            try:
+                quote=cached_intraday(symbol)
+                if quote.empty:raise ValueError('No intraday quote')
+                q=float(quote.Close.iloc[-1]);qt=quote.index[-1]
+                if qt.tzinfo is None:raise ValueError('Missing quote timezone')
+                qt=qt.tz_convert(ET)
+                age=(NOW()-qt.to_pydatetime()).total_seconds()/60
+                if age>30 or qt.date()!=NOW().date():
+                    st.warning(f'Last known underlying close {money(q)} is STALE (bar {qt}). Do not infer current stop status.')
+                else:
+                    sign=1 if plan['direction']=='LONG' else -1
+                    if sign*(q-plan['stop'])<=0:
+                        st.error(f'Underlying {money(q)} beyond planned stop reference {money(plan["stop"])}. This does NOT mean any broker stop executed.')
+                    elif plan['target'] is not None and sign*(q-plan['target'])>=0:
+                        st.info(f'Underlying {money(q)} reached the planned obstacle {money(plan["target"])}. Follow your predefined management plan.')
                     else:
-                        sign=1 if plan['direction']=='LONG' else -1
-                        if sign*(q-plan['stop'])<=0:
-                            st.error(f'Underlying {money(q)} beyond planned stop reference {money(plan["stop"])}. This does NOT mean any broker stop executed.')
-                        elif plan['target'] is not None and sign*(q-plan['target'])>=0:
-                            st.info(f'Underlying {money(q)} reached the planned obstacle {money(plan["target"])}. Follow your predefined management plan.')
-                        else:
-                            st.info(f'Underlying {money(q)} has not breached the stop reference. Reassess price structure and earnings; this alone does not prove the thesis is intact.')
-                        st.caption('Quote bar time '+str(qt)+' · Yahoo may be delayed.')
-                except Exception as exc:st.error(f'Quote not verified: {type(exc).__name__}: {str(exc)[:160]}')
+                        st.info(f'Underlying {money(q)} has not breached the stop reference. Reassess price structure and earnings; this alone does not prove the thesis is intact.')
+                    st.caption('Quote bar time '+str(qt)+' · Yahoo may be delayed.')
+            except Exception as exc:st.error(f'Quote not verified: {type(exc).__name__}: {str(exc)[:160]}')
         with st.form('exit_'+pid):
             exit_price=st.number_input('Actual exit fill ($)',min_value=0.01,value=float(position['entry_price']),format='%.2f')
             reason=st.selectbox('Reason for exit',['Planned target','Structural invalidation / stop','Trailing exit','Manual override','Other'])
@@ -405,7 +427,7 @@ def render_live(snap):
     if plan['symbol'] in frames:
         with st.expander('Show the focused chart & decision levels',expanded=True):
             fig=candles(frames[plan['symbol']],plan=plan,title=f"{plan['symbol']} · completed daily structure")
-            if fig is not None:st.plotly_chart(fig,use_container_width=True,config={'displayModeBar':False,'scrollZoom':False})
+            if fig is not None:st.plotly_chart(fig,width='stretch',config={'displayModeBar':False,'scrollZoom':False})
             st.caption('Daily chart for trend context. This is NOT a live trade confirmation chart.')
     event_panel()
 
@@ -421,7 +443,7 @@ def render_journal():
     st.metric('Frozen plans',len(frozen));st.metric('Recorded events',len(st.session_state.journal))
     if st.session_state.journal:
         f=pd.DataFrame(st.session_state.journal)
-        dark_frame(f,hide_index=True,use_container_width=True)
+        dark_frame(f,hide_index=True,width='stretch')
         closed=f[f['event']=='EXIT_RECORDED']
         if not closed.empty and 'R_before_costs' in closed:
             v=pd.to_numeric(closed['R_before_costs'],errors='coerce').dropna()
@@ -515,6 +537,10 @@ def refresh_market(breadth, pins, discovery):
             install_snapshot(frames,'Yahoo Finance · completed daily candles',fail)
             st.session_state.scan_errors=warnings
             if fail:st.session_state.scan_errors.append(f'{len(fail)} instruments unavailable; excluded from ranking.')
+            pinlist=[s.strip().upper() for s in pins.replace('\n',',').split(',') if s.strip()]
+            loaded=st.session_state.market_snapshot['frames'];skipped=set(st.session_state.market_snapshot.get('skipped',[]))
+            missed=[s for s in pinlist if s not in loaded or s in skipped]
+            if missed:st.session_state.scan_errors.append('My list not scanned (no data or no sector): '+', '.join(missed))
         except Exception as exc:
             st.session_state.scan_errors=[f'Market feed unavailable: {type(exc).__name__}: {str(exc)[:140]}. No simulated fallback.']
 
@@ -561,7 +587,7 @@ def render_terminal(snap, side, search):
             for col,(index,plan) in zip(st.columns(3),enumerate(shown[offset:offset+3],offset+1)):
                 with col:
                     st.markdown(opportunity(plan,index,snap['frames']),unsafe_allow_html=True)
-                    if st.button('＋ Follow setup',key='watch_'+plan.id,use_container_width=True,
+                    if st.button('＋ Follow setup',key='watch_'+plan.id,width='stretch',
                         disabled=plan.id in following or len(following)>=FOLLOW_LIMIT):
                         record_follow(plan);st.rerun()
     else:
@@ -575,7 +601,7 @@ def render_terminal(snap, side, search):
         if checked:
             try:
                 now=NOW();age=(now-datetime.fromisoformat(checked)).total_seconds()
-                fresh=0<=age<=180 and now.weekday()<5 and time(9,30)<=now.time()<time(16,0)
+                fresh=0<=age<=180 and market_is_open(now)
             except (ValueError,TypeError):pass
         state='OPEN' if plan['id'] in st.session_state.positions else result.get('status','WATCH') if fresh else 'STALE' if result else 'AWAITING CHECK' if focused else plan.get('status','WATCH')
         rows.append({'Symbol':plan['symbol'],'Board':'FOCUS' if focused else 'FOLLOWING','Side':plan['direction'],'Setup':plan['setup'],'State':state,
@@ -585,13 +611,13 @@ def render_terminal(snap, side, search):
         chosen=st.selectbox('Manage followed setup',list(following),format_func=lambda k:following[k]['symbol']+' · '+following[k]['setup'])
         item=following[chosen]
         one,two,three=st.columns(3)
-        if one.button('Move to focus',disabled=chosen in st.session_state.frozen or len(st.session_state.frozen)>=FOCUS_LIMIT,use_container_width=True):
+        if one.button('Move to focus',disabled=chosen in st.session_state.frozen or len(st.session_state.frozen)>=FOCUS_LIMIT,width='stretch'):
             focus_plan(st.session_state.frozen,item)
             st.session_state.journal.append({'at':NOW().isoformat(),'event':'PLAN_FROZEN','id':chosen,'symbol':item['symbol'],'note':'Promoted from followed setups to three-plan focus'})
             st.rerun()
-        if two.button('Release focus',disabled=chosen not in st.session_state.frozen or chosen in st.session_state.positions,use_container_width=True):
+        if two.button('Release focus',disabled=chosen not in st.session_state.frozen or chosen in st.session_state.positions,width='stretch'):
             st.session_state.frozen.pop(chosen,None);st.session_state.live_result.pop(chosen,None);st.rerun()
-        if three.button('Unfollow',disabled=chosen in st.session_state.frozen or chosen in st.session_state.positions,use_container_width=True):
+        if three.button('Unfollow',disabled=chosen in st.session_state.frozen or chosen in st.session_state.positions,width='stretch'):
             following.pop(chosen);st.rerun()
         if st.session_state.frozen:
             with st.expander('Focused review / trigger checks / position management',expanded=True):render_live(snap)
@@ -639,7 +665,7 @@ def main():
         side=controls[1].selectbox('Direction',['All','LONG','SHORT'],format_func=lambda x:{'All':'All directions','LONG':'▲ Bullish','SHORT':'▼ Bearish'}[x])
         search=controls[2].text_input('Find a setup',placeholder='Ticker…')
         pins=controls[3].text_input('My list',value=st.session_state.pins,placeholder='Tickers, comma separated')
-        refresh=controls[4].button('↻ Scan universe',type='primary',use_container_width=True)
+        refresh=controls[4].button('↻ Scan universe',type='primary',width='stretch')
         st.session_state.pins=pins
         updated=st.session_state.last_refresh
         st.markdown(f'<div class="toolbar-footer"><span>{snap.get("loaded",0)} histories loaded</span><span>{len(st.session_state.get("all_plans") or get_plans())} qualifying setups</span><span>Last scan {e(updated[11:19]+" ET" if updated else "not run")}</span></div>',unsafe_allow_html=True)

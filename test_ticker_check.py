@@ -89,7 +89,6 @@ def test_current_quote_200_sma_veto_and_stale_rejection():
 
 
 def test_ticker_page_loads_on_demand_and_respects_200_veto(monkeypatch):
-    import streamlit as st
     from streamlit.testing.v1 import AppTest
     import ticker_check_app
     calls=[]

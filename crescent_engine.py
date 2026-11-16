@@ -28,7 +28,6 @@ CROSS_ASSETS={
 # Yield index units and Yahoo quote conventions vary; display raw rather than invent basis points.
 DEFAULT_WATCH=('STX','MRVL','U','ANF')
 ETF_TRADE_CANDIDATES=('XBI','IHI','KRE','XRT','SMH','GDX','GLD','TLT','IBIT')
-LEVERAGED_ETFS=('TQQQ','SQQQ','SOXL','SOXS','LABU','LABD','SPXL','SPXS')
 
 
 def money(v):
@@ -203,6 +202,7 @@ class Plan:
     distance_atr:float
     sector_rotation:str
     state_note:str=''
+    target_kind:str='STRUCTURAL'
     def to_dict(self):return asdict(self)
 
 
@@ -234,6 +234,21 @@ def _target_from_past(f,trigger,sign,atr_value):
     return float(min(levels) if sign==1 else max(levels))
 
 
+def plan_target(f,trigger,stop,sign,atr_value,multiple=2.0):
+    """Structural pivot target when one exists; otherwise, ONLY when price is in
+    open space (no earlier high/low beyond the trigger in the lookback), a clearly
+    labelled projected target of `multiple` x risk. Returns (target, kind).
+    """
+    target=_target_from_past(f,trigger,sign,atr_value)
+    if target is not None:return target,'STRUCTURAL'
+    prior=f.iloc[-90:-1]
+    if len(prior)<8:return None,'UNKNOWN'
+    open_space=float(prior.High.max())<=trigger if sign==1 else float(prior.Low.min())>=trigger
+    risk=sign*(trigger-stop)
+    if open_space and risk>0:return float(trigger+sign*multiple*risk),'PROJECTED'
+    return None,'UNKNOWN'
+
+
 def make_plans(symbol,frame,spy_metrics,sector,sector_rs,regime_label,now=None,source='Yahoo delayed'):
     """Completed EOD bars: sets ARMED/WATCH/BLOCKED, never LIVE READY.
 
@@ -260,7 +275,9 @@ def make_plans(symbol,frame,spy_metrics,sector,sector_rs,regime_label,now=None,s
                 stop=m['prev3low']-0.1*m['atr']
                 desc='Daily uptrend; pullback near 21 EMA with improving close.'
             else:
-                near= abs(m['price']-m['high20'])/m['atr']<=1.25 and m['dryup'] is not None and m['dryup']<1.15
+                # Basing just below (or at) the pivot, not already broken out and extended.
+                gap=(m['price']-m['high20'])/m['atr']
+                near=-1.25<=gap<=0.10 and m['dryup'] is not None and m['dryup']<1.15
                 if not near:continue
                 trigger=max(m['last_high'],m['high20'])+0.03*m['atr']
                 stop=m['prev3low']-0.1*m['atr']
@@ -275,14 +292,15 @@ def make_plans(symbol,frame,spy_metrics,sector,sector_rs,regime_label,now=None,s
             desc='Confirmed daily downtrend with weak bounce; independent short watch.'
         risk=sign*(trigger-stop)
         if risk<=0 or risk>3*m['atr']:continue
-        target=_target_from_past(f,trigger,sign,m['atr'])
+        target,target_kind=plan_target(f,trigger,stop,sign,m['atr'])
         rr=_rr(trigger,stop,target,sign)
         extension=abs(trigger-m['ema21'])/m['atr']
-        score=40+min(16,max(-10,rel21))*1.0 + min(13,max(-8,sign*rel5))*1.2
+        # Both terms are signed by direction: a weaker stock scores HIGHER as a short.
+        score=40+min(16,max(-10,sign*rel21))*1.0 + min(13,max(-8,sign*rel5))*1.2
         score+=8 if sign*sector_rs>0 else -6
         score+=10 if m['dryup'] is not None and m['dryup']<.85 else 0
         score+=5 if extension<=1.4 else -5
-        score+=min(10,rr*4) if rr is not None else 0
+        score+=min(10,rr*4) if rr is not None and target_kind=='STRUCTURAL' else 4 if rr is not None else 0
         score=float(round(min(100,max(0,score)),1))
         if extension>2.5:
             status='EXTENDED';blocker='Trigger too far from daily 21 EMA.'
@@ -296,7 +314,9 @@ def make_plans(symbol,frame,spy_metrics,sector,sector_rs,regime_label,now=None,s
             status='BLOCKED';blocker='Weak market and no positive sector-relative evidence.'
         elif direction=='SHORT' and sign*sector_rs<=0:
             status='BLOCKED';blocker='Short thesis lacks sector-relative confirmation.'
-        else:status='ARMED';blocker='Await completed intraday trigger and VWAP confirmation.'
+        else:
+            status='ARMED';blocker='Await completed intraday trigger and VWAP confirmation.'
+            if target_kind=='PROJECTED':blocker+=' Target is a projected 2R in open space (no overhead pivot); manage with a trailing stop.'
         maxentry=trigger+sign*min(.25*m['atr'],.25*risk)
         plans.append(Plan(
             id=f"{m['asof']}:{symbol}:{mode.replace(' ','_')}",symbol=symbol,sector=sector,
@@ -305,7 +325,8 @@ def make_plans(symbol,frame,spy_metrics,sector,sector_rs,regime_label,now=None,s
             rr=round(rr,2) if rr is not None else None,score=score,reason=desc,
             blocker=blocker,asof=m['asof'],source=source,created_at=(now or datetime.now(ET)).isoformat(),
             max_entry=round(maxentry,2),distance_atr=round(extension,2),sector_rotation=('UNKNOWN' if not sector_available else 'OUTPERFORMING' if sector_rs>0 else 'LAGGING'),
-            state_note='Paper plan — not a live order. Confirm earnings and catalyst status.'
+            state_note='Paper plan — not a live order. Confirm earnings and catalyst status.',
+            target_kind=target_kind
         ))
     return plans
 
@@ -379,15 +400,17 @@ def live_check(plan,five,now=None,opening_cutoff=time(9,50),max_age_minutes=20,m
     if manual_event_block:return {'status':'BLOCKED','why':'Manual macro/earnings event restriction active.','vwap':None,'price':None}
     if p.get('status')!='ARMED':
         return {'status':'BLOCKED','why':'Only a frozen ARMED plan is eligible for live confirmation; revalidate this watch in the Night Plan.','vwap':None,'price':None}
+    from session_validity import sessions_between,today_session
     try:
         plan_date=pd.Timestamp(p['asof']).date()
-        elapsed_sessions=len(pd.bdate_range(start=plan_date+pd.Timedelta(days=1),end=now.date()))
+        elapsed_sessions=sessions_between(plan_date,now)
         if elapsed_sessions>1:
             return {'status':'STALE','why':'The frozen overnight plan predates the previous trading session; rebuild the levels.','vwap':None,'price':None}
     except (ValueError,TypeError,KeyError):
         return {'status':'STALE','why':'Plan date invalid or unknown.','vwap':None,'price':None}
-    if now.weekday()>=5 or now.time()<time(9,30) or now.time()>=time(16,0):
-        return {'status':'MARKET CLOSED','why':'No live entry confirmation outside regular US cash hours.','vwap':None,'price':None}
+    hours=today_session(now)
+    if hours is None or not (hours[0]<=now<hours[1]):
+        return {'status':'MARKET CLOSED','why':'No live entry confirmation outside the regular NYSE session (holidays and half days included).','vwap':None,'price':None}
     if now.time()<opening_cutoff:
         return {'status':'WAIT','why':f'Observe until {opening_cutoff.strftime("%I:%M %p")} ET; no opening entries.','vwap':None,'price':None}
     tf=ten_minute_bars(five,now)
@@ -400,6 +423,12 @@ def live_check(plan,five,now=None,opening_cutoff=time(9,50),max_age_minutes=20,m
     if vf.empty or not finite(vf.VWAP.iloc[-1]):return {'status':'STALE','why':'Session VWAP unavailable.','vwap':None,'price':None}
     price=float(tf.Close.iloc[-1]);vw=float(vf.VWAP.iloc[-1]);sign=1 if p['direction']=='LONG' else -1
     info={'price':round(price,2),'vwap':round(vw,2),'bar_time':str(latest),'status':'WAIT','why':''}
+    # Any completed session bar through the stop invalidates the plan for the day,
+    # even if price has since recovered.
+    session_bars=vf[vf.index+pd.Timedelta(minutes=5)<=now]
+    extreme=float(session_bars.Low.min()) if sign==1 else float(session_bars.High.max())
+    if sign*(extreme-p['stop'])<=0:
+        info.update(status='INVALID',why=f"Session already traded through the frozen invalidation ({money(extreme)}); the plan is void for today.");return info
     if sign*(price-p['stop'])<=0:
         info.update(status='INVALID',why='Underlying breached the frozen structural invalidation.');return info
     if sign*(price-p['trigger'])<=0:
@@ -436,10 +465,6 @@ def live_check(plan,five,now=None,opening_cutoff=time(9,50),max_age_minutes=20,m
         info.update(status='WAIT',why='Latest completed 10m candle did not close with the planned direction.');return info
     info.update(status='READY',why='Completed 10m close beyond frozen trigger, VWAP aligned, entry zone and remaining R:R valid. Review manually.')
     return info
-
-
-def mock_regime_note(rotation):
-    return 'Defensive leadership detected from sector ETF proxies; confirm breadth and catalysts.' if rotation=='DEFENSIVE LEADERSHIP' else 'Sector leadership remains mixed; examine relative strength before selecting trades.'
 
 
 def preopen_assessment(plan,quote_price,previous_close,quote_timestamp,now=None,max_age_minutes=25):

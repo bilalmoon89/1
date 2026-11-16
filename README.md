@@ -50,6 +50,29 @@ The standard exclusion removes Pharmaceuticals, Biotechnology & Life Sciences us
 
 The former Night Plan, Pre-open, Live Desk, Regime & Rotation, and Research screens are no longer navigation destinations. This rework does not add new Air Gap detection rules or data services. Legacy screenshots and release documents are retained under `docs/legacy` for historical reference only.
 
+## VCP & Power Earnings Gap setups
+
+Open `?view=setups` from the **↗ VCP & PEG** header link. The page scans completed daily candles for accumulation: a run of small candles whose closes sit tightly together on, or just above, the 8 EMA while volume dries up.
+
+- **VCP**: stage-2 uptrend (price > 50 > 150 > 200 SMA, 200 SMA rising, within 25% of the 52-week high). The base must show 2–4 pullbacks, each smaller than the last, with the final pullback at most 12%. Price must be just under the pivot (not already broken out), and the tight 8 EMA area must be present.
+- **PEG (Power Earnings Gap)**: a gap of at least 5% on at least 2.5× the 50-day volume, closing in the upper half of the day, within the last 40 sessions. The stock must never undercut the gap-day low and must then tighten on the 8 or 21 EMA. Yahoo earnings dates label each gap Confirmed / Not earnings / Unverified.
+- **Tight-candle rule (Standard preset)**: 3 of the last 5 days have a range under 60% of the 20-day average range. The last 3 closes are within 1.5% of each other and within 1 ATR of the EMA. Volume is under 80% of the 50-day average. Very strict and Loose presets are included, and every value is editable.
+
+Each row shows trigger, stop, risk %, the pullback sequence or gap details, and RS vs SPY. Rows are candidates, not signals. Your own tickers get a "why not matched" explanation.
+
+## Changes in 7.8.0
+
+- `stocks.csv`: 413 of 415 "US Large/Mid Cap" rows now carry GICS sectors, so they can reach ARMED. Remaining or unknown names (including TradingView discoveries and your own list) get their sector from TradingView at scan time.
+- One shared sector→ETF map (`sector_map.py`) for scanning and live checks. GLD/GDX/TLT/IBIT are measured against their own asset class.
+- Short scores are signed (weaker stocks score higher as shorts).
+- Breakouts in open space get a clearly labelled projected 2R target, instead of being stuck at WATCH. The base breakout no longer accepts price already above the pivot. Ticker Check high tight flags get a projected 3R target.
+- Live check: any session bar through the stop makes the plan INVALID. Staleness counts real NYSE sessions, and half days/holidays close the live window. The same calendar governs the Watchtower and the live check button.
+- A built-in NYSE holiday/half-day calendar is used if `exchange_calendars` is unavailable.
+- Provider calls no longer share a 2-thread pool, so a hung request cannot freeze other requests. Failed daily downloads are not cached on the terminal.
+- The 60-second intraday refresh only runs while the market is open. Theme metrics are computed once per scan.
+- BRK.B / BF.B are requested from Yahoo as BRK-B / BF-B. Your own list is always scanned, with a warning for any ticker that could not be.
+- Ticker Check uses the same Wilder ATR as the scanner. Demo-mode leftovers and unused imports were removed, and `use_container_width` was replaced.
+
 ## Verify
 
 ```sh

@@ -9,8 +9,13 @@ ET=ZoneInfo('America/New_York')
 
 @lru_cache(maxsize=1)
 def calendar():
-    import exchange_calendars as xc
-    return xc.get_calendar('XNYS')
+    """Official XNYS calendar; falls back to built-in NYSE rules if the package is missing."""
+    try:
+        import exchange_calendars as xc
+        return xc.get_calendar('XNYS')
+    except Exception:
+        from nyse_fallback import FallbackNYSE
+        return FallbackNYSE()
 
 
 def session_clock(now):
@@ -24,6 +29,29 @@ def session_clock(now):
         session=cal.previous_session(session)
         closed=cal.session_close(session).tz_convert(ET)
     return {'date':session.date(),'close':closed,'open':active,'now':now}
+
+
+def market_is_open(now):
+    """True only inside today's actual NYSE regular session (holidays and half days aware)."""
+    return bool(session_clock(now)['open'])
+
+
+def today_session(now):
+    """(open, close) for today's NYSE session in ET, or None on a non-trading day."""
+    now=pd.Timestamp(now).tz_convert(ET)
+    cal=calendar();day=pd.Timestamp(now.date())
+    if not cal.is_session(day):return None
+    return cal.session_open(day).tz_convert(ET),cal.session_close(day).tz_convert(ET)
+
+
+def sessions_between(start_date,now):
+    """Number of NYSE sessions strictly after start_date up to and including now's date."""
+    now=pd.Timestamp(now).tz_convert(ET)
+    cal=calendar()
+    first=pd.Timestamp(start_date)+pd.Timedelta(days=1)
+    last=pd.Timestamp(now.date())
+    if first>last:return 0
+    return len(cal.sessions_in_range(first,last))
 
 
 def regular_status(stamp,now,max_age_seconds=900,close_tolerance_seconds=0):

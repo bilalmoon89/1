@@ -82,7 +82,7 @@ def apply_exclusions(frame,industries,exclude_pharma=True,tickers=(),keywords=()
 
 def screen_intraday(history,quotes,now,filters=None):
     """Active session ranges and prices; completed-session liquidity baselines."""
-    from datetime import datetime,time
+    from datetime import datetime
     from zoneinfo import ZoneInfo
     from session_validity import session_clock,regular_status
     filters=filters or LiquidFilters()
