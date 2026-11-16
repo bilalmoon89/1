@@ -73,6 +73,14 @@ Each row shows trigger, stop, risk %, the pullback sequence or gap details, and 
 - BRK.B / BF.B are requested from Yahoo as BRK-B / BF-B. Your own list is always scanned, with a warning for any ticker that could not be.
 - Ticker Check uses the same Wilder ATR as the scanner. Demo-mode leftovers and unused imports were removed, and `use_container_width` was replaced.
 
+## Design (7.8.0)
+
+- Brand from crescentinsights.net: the crescent mark (SVG), a Cormorant Garamond wordmark, Inter body text, brand gold `#B8922A` / `#D4A840` on navy `#0A101A`. Primary buttons are gold with navy text, as on the site.
+- One header with page navigation (Terminal · VCP & PEG · Liquid Uptrend · Ticker Check). The links open in the same tab, the current page is highlighted, and the version is read from `VERSION.json`.
+- Session-status pills are neutral. Green and red are only used for direction, or for above/below VWAP. Flat sparklines are grey.
+- Muted text lifted to at least 4.5:1 contrast. Notices are compact. Panels grow with their content instead of clipping rows.
+- Mobile: a stacked header with scrollable nav chips, a two-column market strip, a sticky symbol column in wide tables, and readable 12.5–14px text.
+
 ## Verify
 
 ```sh

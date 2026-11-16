@@ -5,6 +5,21 @@ import pandas as pd
 from crescent_engine import snapshot, money, SECTORS
 from market_symbols import DISPLAY_BENCHMARKS
 from urllib.parse import quote
+import json
+from pathlib import Path
+
+# Brand mark from crescentinsights.net (same crescent geometry, brand gold).
+LOGO_SVG=('<svg class="brand-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">'
+    '<circle cx="24" cy="24" r="22" stroke="#B8922A" stroke-width="1" opacity="0.45"/>'
+    '<path d="M24 8C16.268 8 10 14.268 10 22s6.268 14 14 14c1.96 0 3.82-.39 5.52-1.09C26.04 32.56 23 28.56 23 24s3.04-8.56 6.52-10.91A13.93 13.93 0 0 0 24 8z" fill="#B8922A"/></svg>')
+
+
+def _version():
+    try:return json.loads((Path(__file__).with_name('VERSION.json')).read_text(encoding='utf-8'))['version'].replace('-beta','')
+    except Exception:return ''
+
+
+VERSION=_version()
 
 def e(value):
     return escape(str(value), quote=True)
@@ -74,8 +89,14 @@ def spark(frame, color, label="Last 32 completed daily closes"):
 def panel(title, body, meta=''):
     return f'<section class="terminal-panel"><div class="panel-head"><b><span class="grip">⠿</span> {e(title)}</b><span>{e(meta)}</span></div><div class="panel-body">{body}</div></section>'
 
-def header(updated=None,source='Yahoo Finance'):
-    return f'<div class="terminal-header"><div class="terminal-brand"><span class="moon">☾</span><div><strong>CRESCENT <span>TRADE TERMINAL</span><em>BETA</em></strong><small>MARKET INTELLIGENCE / AIR GAP RESEARCH</small></div></div><div class="header-meta"><span class="source-pill">● {e(source)}</span><a class="liquid-link" href="?view=setups" target="_blank" rel="noopener noreferrer">↗ VCP &amp; PEG</a><a class="liquid-link" href="?view=liquid" target="_blank" rel="noopener noreferrer">↗ Liquid Uptrend</a><a class="liquid-link" href="?view=ticker" target="_blank" rel="noopener noreferrer">↗ Ticker Check</a><a class="terminal-home" href="?view=terminal" target="_self">Terminal</a><span class="build-pill">BETA · 7.7.3</span></div></div>'
+def header(updated=None,source='Yahoo Finance',active='terminal'):
+    links=[('terminal','Terminal'),('setups','VCP &amp; PEG'),('liquid','Liquid Uptrend'),('ticker','Ticker Check')]
+    nav=''.join(f'<a class="nav-chip{" active" if key==active else ""}" href="?view={key}" target="_self">{label}</a>' for key,label in links)
+    return (f'<div class="terminal-header"><div class="terminal-brand">{LOGO_SVG}<div class="brand-words">'
+        f'<strong>Crescent<em>BETA</em></strong><small>Trade Terminal · Market Intelligence</small></div></div>'
+        f'<nav class="header-nav" aria-label="Pages">{nav}</nav>'
+        f'<div class="header-meta"><span class="source-pill">● {e(source)}</span>'
+        f'<span class="build-pill">v{e(VERSION)}</span></div></div>')
 
 def overview(snap, plans, frozen, intraday=None):
     intraday=intraday or {}
@@ -103,7 +124,8 @@ def overview(snap, plans, frozen, intraday=None):
         stamp=str(r.get('Bar close','')) if r is not None else ''
         timestamp=(stamp[:10]+' '+stamp[11:16]+' ET') if 'T' in stamp else stamp
         extra=f'<small class="quote-asof">As of {e(timestamp)}</small>' if timestamp else ''
-        quotes.append(f'<div class="quote"><div><b>{e("VIX" if symbol=="^VIX" else symbol)}</b> <span class="pill {quote_tone}">{trend}</span><strong>{last}</strong>{extra}</div><div class="quote-change {quote_tone}">{num(change,"%")}<small>vs previous close</small></div>{spark(intraday.get("frames",{}).get(symbol),"#37ca94" if quote_tone=="up" else "#ed6e7c","Completed 5-minute RTH closes")}</div>')
+        pill_tone='up' if trend=='ABOVE VWAP' else 'down' if trend in ('BELOW VWAP','ELEVATED') else 'neutral'
+        quotes.append(f'<div class="quote"><div><b>{e("VIX" if symbol=="^VIX" else symbol)}</b> <span class="pill {pill_tone}">{e(trend)}</span><strong>{last}</strong>{extra}</div><div class="quote-change {quote_tone}">{num(change,"%")}<small>vs previous close</small></div>{spark(intraday.get("frames",{}).get(symbol),"#37ca94" if quote_tone=="up" else "#ed6e7c" if quote_tone=="down" else "#7d8ea3","Completed 5-minute RTH closes")}</div>')
     sector=intra[intra.Symbol.isin(SECTORS)].sort_values('Vs SPY pp',ascending=False) if not intra.empty else pd.DataFrame()
     rows=[]
     if not sector.empty:
@@ -134,6 +156,7 @@ def opportunity(plan, rank, frames):
 
 CSS='''
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap');
 :root{color-scheme:dark;--bg:#080d14;--panel:#101821;--line:#26313d;--muted:#8493a5;--gold:#b29457;--green:#43d29e;--red:#f27888}
 .stApp,[data-testid="stAppViewContainer"]{background:var(--bg)!important;color:#dde4ed!important}
 [data-testid="stHeader"]{display:none!important}[data-testid="stSidebar"]{display:none!important}
@@ -192,5 +215,68 @@ h3{font-size:15px!important;padding:5px 0!important}p{font-size:12px;line-height
 @media(max-width:1599px){.quote-strip{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:680px){.quote-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.quote:first-child{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center}.quote:first-child .spark{width:100%;height:40px}.header-meta{justify-content:flex-start;gap:10px}.liquid-link{min-height:42px;font-size:12px}.theme-members-cell{min-width:220px}.member-chip{font-size:10px!important}.preset-banner{align-items:flex-start;flex-direction:column;gap:5px}}
 [data-testid="stFormSubmitButton"] button[kind="primary"],[data-testid="stBaseButton-primary"]{background:#80612f!important;border:1px solid #9d7b40!important;color:#f0e8d8!important;border-radius:4px!important;min-height:40px!important}
+
+/* ===== Brand pass (crescentinsights.net): navy + gold, Cormorant Garamond + Inter ===== */
+:root{--bg:#0A101A;--panel:#101925;--panel-2:#142030;--line:#253244;--text:#F0EDE6;--muted:#A9B6C6;--gold:#B8922A;--gold-hi:#D4A840;--green:#45D6A0;--red:#F47F8E;
+  --sans:Inter,"Helvetica Neue",Arial,sans-serif;--serif:"Cormorant Garamond",Georgia,serif;--mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace}
+.stApp,[data-testid="stAppViewContainer"]{background:var(--bg)!important;color:var(--text)!important}
+body,p,button,input,label,select,textarea,.stMarkdown,.terminal-table,.terminal-table td{font-family:var(--sans)!important}
+h1,h2,h3{font-family:var(--sans)!important;color:var(--text)!important}
+.quote b,.quote strong,.quote-change,.op-head>b,.level-grid b,.theme-reading,.tc-values b,.forming,.member-chip,.sector-chips>span,.terminal-foot,.header-meta{font-family:var(--mono)!important;font-variant-numeric:tabular-nums}
+.terminal-table th{font-family:var(--sans)!important;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9fb0c3}
+/* Header: real crescent mark, serif wordmark, quiet navigation */
+.terminal-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;border-bottom:1px solid rgba(184,146,42,.45);padding:2px 0 14px;margin-bottom:14px;min-height:0}
+.terminal-brand{gap:12px}.brand-mark{width:44px;height:44px;flex:none}
+.brand-words strong{font:600 28px/1 var(--serif)!important;color:var(--text);letter-spacing:.01em;display:flex;align-items:center;gap:10px}
+.brand-words em{font:600 9px var(--sans)!important;letter-spacing:.16em;color:var(--gold-hi);border:1px solid rgba(184,146,42,.55);border-radius:3px;padding:3px 6px;font-style:normal}
+.brand-words small{display:block;margin-top:6px;font:500 10px var(--sans)!important;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.header-nav{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.nav-chip{font:500 13px var(--sans);color:#C9D3DF!important;text-decoration:none!important;padding:8px 12px;border-radius:6px;border:1px solid transparent;white-space:nowrap}
+.nav-chip:hover{color:var(--gold-hi)!important;border-color:rgba(184,146,42,.4)}
+.nav-chip.active{color:var(--gold-hi)!important;border-color:rgba(184,146,42,.6);background:rgba(184,146,42,.08)}
+.header-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);white-space:nowrap}
+.source-pill{color:var(--green);border:1px solid #23503f;border-radius:20px;padding:5px 10px}.build-pill{color:var(--gold-hi)}
+.liquid-link,.terminal-home,.moon{display:none!important}
+/* Gold accents and actions, as on the site: gold fill with navy text */
+[data-testid="stButton"] button[kind="primary"],[data-testid="stFormSubmitButton"] button[kind="primary"],[data-testid="stBaseButton-primary"]{background:var(--gold)!important;border:1px solid var(--gold)!important;color:#0A101A!important;font-weight:600!important;letter-spacing:.04em}
+[data-testid="stButton"] button[kind="primary"]:hover,[data-testid="stBaseButton-primary"]:hover{background:var(--gold-hi)!important;border-color:var(--gold-hi)!important}
+[data-testid="stButton"] button[kind="primary"] p,[data-testid="stBaseButton-primary"] p{color:#0A101A!important}
+[data-testid="stButton"] button,[data-testid="stDownloadButton"] button{background:var(--panel-2)!important;border:1px solid #33445A!important;color:#E1E8F0!important;border-radius:6px!important}
+[data-testid="stButton"] button:hover,[data-testid="stDownloadButton"] button:hover{border-color:var(--gold)!important;color:var(--gold-hi)!important}
+[data-testid="stTabs"] [aria-selected="true"]{color:var(--gold-hi)!important}
+.regime-strip{border-left:3px solid var(--gold)}.pill.amber,.badge-amber{color:#E3C77E!important;background:#3A3020!important}
+.pill{font-family:var(--sans)!important;font-weight:600;letter-spacing:.04em}.pill.neutral{background:#1E2938;color:#B9C5D3}
+.terminal-panel{border-bottom:1px solid var(--line)}.panel-head{background:var(--panel-2)}
+.theme-meta span:last-child{color:var(--gold-hi)}
+/* Notices: compact, readable, left accent instead of heavy full boxes */
+[data-testid="stAlert"]{background:#121C29!important;border:1px solid var(--line)!important;border-left:3px solid #5D8FC7!important;border-radius:6px!important;padding:2px 4px!important}
+[data-testid="stAlert"] p{font-size:13px!important;line-height:1.5!important;color:#D5DEE8!important}
+/* Contrast: lift the dimmest greys to >= 4.5:1 on navy */
+.muted,.rank,.no-series,.terminal-foot,.member-missing,.panel-head span,.section-heading span,.status-line,.micro-note,.quote-asof,.quote-change small,.level-grid small,.rotation-lead small{color:var(--muted)!important}
+.grip{color:#6E7D90}
+/* Panels grow with content instead of leaving empty space or clipping mid-row */
+.panel-body{height:auto!important;max-height:330px;min-height:120px}
+/* Market strip: one row on wide screens, no empty slots */
+.quote-strip{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))!important}
+.quote{border-right:1px solid #222D39;border-bottom:1px solid #222D39}
+.preset-banner{background:#211C12;border-color:#5E4C25;border-left-color:var(--gold);color:#EADBB5}
+.sub-heading{display:flex;align-items:center;gap:10px;margin:14px 0 6px;font:600 13px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--gold-hi)}
+.sub-heading span{font:600 11px var(--mono);color:#0A101A;background:var(--gold);border-radius:10px;padding:2px 8px;letter-spacing:0}
+.wrap-table .terminal-table td{white-space:normal;min-width:80px;line-height:1.45}
+.table-scroll .terminal-table td:first-child,.table-scroll .terminal-table th:first-child{position:sticky;left:0;z-index:1;background:#101925}
+.table-scroll .terminal-table th:first-child{background:#141e29;z-index:2}
+@media(max-width:1100px){.terminal-header{grid-template-columns:1fr auto}.header-nav{grid-column:1/-1;justify-content:flex-start;order:3}}
+@media(max-width:680px){
+  .block-container{padding:12px 14px 32px!important}
+  .terminal-header{grid-template-columns:1fr;gap:10px;padding-bottom:10px}
+  .brand-mark{width:38px;height:38px}.brand-words strong{font-size:24px!important}.brand-words small{font-size:9px!important;letter-spacing:.16em}
+  .header-nav{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;margin:0 -14px;padding:0 14px 2px;scrollbar-width:none}
+  .header-nav::-webkit-scrollbar{display:none}
+  .nav-chip{border-color:#2C3A4C;padding:9px 10px;font-size:12.5px}
+  .header-meta{justify-content:flex-start;flex-wrap:wrap;white-space:normal}
+  .quote-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  p,.stMarkdown p{font-size:14px}[data-testid="stCaptionContainer"] p{font-size:12.5px!important;line-height:1.5}
+  .terminal-table{font-size:13px!important}
+}
 </style>
 '''

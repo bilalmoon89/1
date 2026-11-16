@@ -42,6 +42,24 @@ def _rule_controls():
             PEGRules(gap_pct=gap,volume_mult=mult,lookback=int(look)))
 
 
+LEAD=['Symbol','Close','Trigger','Stop','Risk %']
+SPECIFIC={'VCP':['Pullbacks','Contractions','Pivot','Vs pivot %','Base days','Base vol dry-up'],
+          'PEG':['Gap date','Gap %','Gap volume x','Gap-day low','Days since gap','Earnings']}
+TAIL=['EMA','Vs EMA ATR','Tight days','Close spread %','Volume vs 50D','RS 63D vs SPY pp','As of']
+
+
+def _display(part):
+    """Setup-specific column order, whole numbers shown without decimals."""
+    if part.empty:return part
+    setup=part['Setup'].iloc[0]
+    part=part.dropna(axis=1,how='all')
+    order=[c for c in LEAD+SPECIFIC.get(setup,[])+TAIL if c in part.columns]
+    part=part[order].copy()
+    for c in ('Contractions','Base days','Days since gap','Tight days'):
+        if c in part:part[c]=part[c].astype('Int64')
+    return part
+
+
 def render_setups_page(daily_loader,universe_loader,earnings_loader,now):
     st.markdown('<div class="section-heading">VCP &amp; Power Earnings Gap <span>Tight 8 EMA accumulation · completed daily candles only</span></div>',unsafe_allow_html=True)
     left,mid,right=st.columns([1.3,1.2,1],vertical_alignment='bottom')
@@ -107,15 +125,16 @@ def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules):
         st.info('No stock passes every rule in the loaded data. The rules have not been relaxed; try the Loose preset to see near-misses.')
     else:
         for name in ('VCP','PEG'):
-            part=matches[matches.Setup==name].dropna(axis=1,how='all')
+            part=_display(matches[matches.Setup==name])
             if part.empty:continue
-            st.markdown(f'**{name}** · {len(part)}')
-            st.markdown(table(part.drop(columns='Setup')),unsafe_allow_html=True)
+            label='VCP · volatility contraction' if name=='VCP' else 'PEG · power earnings gap'
+            st.markdown(f'<div class="sub-heading">{label}<span>{len(part)}</span></div>',unsafe_allow_html=True)
+            st.markdown(table(part),unsafe_allow_html=True)
         st.download_button('Export setups CSV',matches.to_csv(index=False),file_name='Crescent_VCP_PEG_Setups.csv',mime='text/csv')
     mine=[s for s in job.get('extras',[]) if s in reasons]
     if mine:
         with st.expander(f'Why your tickers did not match · {len(mine)}',expanded=True):
-            st.markdown(table(pd.DataFrame([{'Symbol':s,'Reason':reasons[s]} for s in mine])),unsafe_allow_html=True)
+            st.markdown('<div class="wrap-table">'+table(pd.DataFrame([{'Symbol':s,'Reason':reasons[s]} for s in mine]))+'</div>',unsafe_allow_html=True)
     if job['failures']:
         with st.expander(f"Unavailable histories · {len(job['failures'])}"):
-            st.markdown(table(pd.DataFrame([{'Symbol':k,'Reason':v} for k,v in job['failures'].items()])),unsafe_allow_html=True)
+            st.markdown('<div class="wrap-table">'+table(pd.DataFrame([{'Symbol':k,'Reason':v} for k,v in job['failures'].items()]))+'</div>',unsafe_allow_html=True)

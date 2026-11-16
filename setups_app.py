@@ -26,7 +26,7 @@ def main():
         page_icon='🌙',layout='wide',initial_sidebar_state='collapsed')
     view=import_local('terminal_view')
     st.markdown(view.CSS,unsafe_allow_html=True)
-    st.markdown(view.header(source='Yahoo Finance · completed daily candles'),unsafe_allow_html=True)
+    st.markdown(view.header(active='setups',source='Yahoo Finance · completed daily candles'),unsafe_allow_html=True)
     liquid=import_local('liquid_app')
     import_local('setups_view').render_setups_page(liquid.daily_batch,liquid.universe,earnings_dates,
         datetime.now(ZoneInfo('America/New_York')))

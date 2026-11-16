@@ -46,7 +46,7 @@ class PartialTicker(Exception):
 def main():
     st.set_page_config(page_title='Ticker Check | Crescent Trade Terminal — BETA',page_icon='🌙',layout='wide',initial_sidebar_state='collapsed')
     st.markdown(CSS+TICKER_CSS,unsafe_allow_html=True)
-    st.markdown(header(source='Yahoo Finance · reported financials'),unsafe_allow_html=True)
+    st.markdown(header(active='ticker',source='Yahoo Finance · reported financials'),unsafe_allow_html=True)
     st.markdown('<div class="tc-note">TICKER CHECK · Fundamentals / technicals / trade plan</div>',unsafe_allow_html=True)
     with st.form('ticker_lookup'):
         left,right=st.columns([4,1],vertical_alignment='bottom')

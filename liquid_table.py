@@ -40,7 +40,7 @@ def leaders_table(frame):
             color='#dce5f1';background='transparent';body=escape(str(value))
             try:number=float(value)
             except (ValueError,TypeError):number=float('nan')
-            if column=='Symbol':color='#bda16a';background='#2a2418';body=f'<b>{body}</b>'
+            if column=='Symbol':color='#D4A840';background='#221B0E';body=f'<b>{body}</b>'
             elif '%' in column and math.isfinite(number):
                 color='#55e1a5' if number>=0 else '#ff7b87'
                 background='#102c26' if number>=0 else '#351d29'

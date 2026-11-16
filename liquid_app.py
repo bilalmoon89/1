@@ -46,6 +46,6 @@ def main():
         page_icon='🌙',layout='wide',initial_sidebar_state='collapsed')
     view=import_local('terminal_view')
     st.markdown(view.CSS,unsafe_allow_html=True)
-    st.markdown(view.header(source="TradingView + Yahoo"),unsafe_allow_html=True)
+    st.markdown(view.header(active='liquid',source="TradingView + Yahoo"),unsafe_allow_html=True)
     import_local('liquid_view').render_liquid_page(daily_batch,classifications,universe,
         datetime.now(ZoneInfo('America/New_York')),session_quotes)
