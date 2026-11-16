@@ -40,6 +40,13 @@ def financial_quarters(statement,comparisons=None):
         if matches and number(row.Revenue) is not None:
             old=min(matches,key=lambda item:item[0])[1]
             result.loc[i,'Revenue YoY %']=(row.Revenue/old-1)*100
+    result['EPS YoY %']=None
+    for i,row in result.iterrows():
+        eps=number(row['Diluted EPS'])
+        prior=[number(o['Diluted EPS']) for _,o in result.iterrows()
+            if 350<=(pd.Timestamp(row['Period end'])-pd.Timestamp(o['Period end'])).days<=380]
+        # Growth from a loss or zero base is not a meaningful percentage, so it stays blank.
+        if eps is not None and prior and prior[0] is not None and prior[0]>0:result.loc[i,'EPS YoY %']=(eps/prior[0]-1)*100
     return result.head(5).copy()
 
 
@@ -108,7 +115,7 @@ def technical_review(raw,now):
     if len(f)<200:return {'decision':'NO GO · DATA INCOMPLETE','reason':'200 completed daily bars required.','averages':pd.DataFrame(),'frame':f}
     close=f.Close;price=float(close.iloc[-1])
     atr=atr14(f);checks=[]  # Same Wilder ATR as the scanner, so stops agree across pages.
-    for n in (9,21,50):
+    for n in (8,21,50):  # 8 EMA, the same average the VCP / PEG scanner uses
         ema=close.ewm(span=n,adjust=False).mean()
         above=price>=ema.iloc[-1]
         held=above and (close.tail(3)>=ema.tail(3)).all() and (f.Low.tail(5)<=ema.tail(5)+.25*atr).any()
@@ -193,3 +200,90 @@ def quote_review(quote,now):
             'updated':stamp.tz_convert('America/New_York').isoformat(timespec='seconds'),'feed':feed}
     except (KeyError,ValueError,TypeError,OverflowError):
         return {'valid':False,'status':'UNAVAILABLE / STALE · fresh intraday check required'}
+
+
+NON_COMPANY=('ETF','FUTURE','INDEX','MUTUALFUND','CRYPTOCURRENCY','CURRENCY')
+
+
+def market_context(frame,spy=None):
+    """Key numbers for one completed daily series; relative strength needs SPY through the same session."""
+    f=normalise(frame)
+    if len(f)<60:return {}
+    close=f.Close;price=float(close.iloc[-1]);atr=atr14(f)
+    out={'atr_pct':atr/price*100 if atr else None,
+        'off_high':(price/float(f.High.tail(252).max())-1)*100,
+        'dollar_volume':float((f.Close*f.Volume).tail(50).mean()),
+        'adr20':float((f.High.tail(20)/f.Low.tail(20)-1).mean()*100),
+        'vs200':(price/float(close.tail(200).mean())-1)*100 if len(f)>=200 else None,
+        'rs63':None,'ext8':None,'ext21':None}
+    if atr:
+        for span in (8,21):out[f'ext{span}']=(price-float(close.ewm(span=span,adjust=False).mean().iloc[-1]))/atr
+    s=normalise(spy) if spy is not None else pd.DataFrame()
+    if len(s)>63 and len(f)>63 and s.index[-1]==f.index[-1]:
+        out['rs63']=((price/float(close.iloc[-64]))-(float(s.Close.iloc[-1])/float(s.Close.iloc[-64])))*100
+    return out
+
+
+def setup_status(frame,spy=None,earnings_dates=None):
+    """Run the scanner's VCP and PEG rules (Standard preset) on one ticker."""
+    from setup_scanner import scan_vcp,scan_peg
+    out={}
+    for name,function,extra in (('VCP',scan_vcp,{}),('PEG',scan_peg,{'earnings_dates':earnings_dates or None})):
+        try:row,message=function('TICKER',frame,spy,**extra)
+        except Exception as exc:row,message=None,f'{type(exc).__name__}: {str(exc)[:80]}'
+        out[name]={'found':row is not None,'row':row,'reason':'Matches the Standard preset.' if row else message}
+    return out
+
+
+def apply_setup_plan(tech,setups):
+    """When the trend passes but no entry was defined, use the scanner's VCP / PEG trigger and stop.
+
+    Returns the basis of the plan shown on the page, or '' when there is none.
+    """
+    if tech.get('entry') and tech.get('stop'):
+        return 'High tight flag pivot' if tech.get('pattern',{}).get('found') else '21 EMA pullback high'
+    if tech.get('decision')!='WAIT · NO DEFINED SETUP':return ''
+    for name,basis in (('VCP','VCP pivot'),('PEG','PEG tight-area high')):
+        row=(setups.get(name) or {}).get('row')
+        if not row:continue
+        entry=float(row['Trigger']);stop=float(row['Stop']);atr=tech['atr']
+        if entry<=stop:continue
+        target,kind=plan_target(tech['frame'],entry,stop,1,atr,multiple=3.0)
+        rr=(target-entry)/(entry-stop) if target else None
+        tech.update(entry=entry,stop=stop,target=target,rr=rr,
+            decision='CONDITIONAL TRADE PLAN' if rr and rr>=2 and entry-stop<=3*atr else 'WATCH · RISK/REWARD UNVERIFIED',
+            reason=f'{name} found by the scanner rules: trigger above the {basis.lower()}, stop under the tight area. '
+                +('Target is a projected 3R in open space; manage with a trailing stop.' if kind=='PROJECTED'
+                  else 'A known resistance target and >=2R are required; no automatic entry.'))
+        return basis
+    return ''
+
+
+def checklist(tech,fund_state,setups=None,context=None,earnings_days=None):
+    """Gate list for the page: (label, pass | fail | warn | na, detail)."""
+    setups=setups or {};context=context or {};items=[]
+    averages=tech.get('averages')
+    if averages is None or averages.empty:return items
+    state={r['Average']:r['State'] for _,r in averages.iterrows()}
+    items.append(('Above 200 SMA','pass' if state.get('Daily SMA 200')=='ABOVE' else 'fail','Hard veto when below.'))
+    stage=tech.get('stage',{}).get('stage','UNKNOWN')
+    items.append(('Stage 2','pass' if stage.startswith('2') else 'fail' if stage.startswith('4') else 'warn',stage))
+    daily=[state.get(f'Daily EMA {n}') for n in (8,21,50)]
+    held=[n for n,v in zip((8,21,50),daily) if v=='TESTED & HELD']
+    items.append(('8 / 21 / 50 EMA','fail' if 'BELOW' in daily else 'pass',
+        'Below at least one daily EMA.' if 'BELOW' in daily else ('Tested and held: '+', '.join(f'{n} EMA' for n in held)) if held else 'Above all three, none tested recently.'))
+    weekly=state.get('Weekly EMA 8 · completed weeks','UNKNOWN')
+    items.append(('Weekly 8 EMA','pass' if weekly in ('TESTED & HELD','ABOVE · UNTESTED') else 'warn' if weekly=='UNKNOWN' else 'fail',weekly))
+    off=number(context.get('off_high'))
+    if off is not None:items.append(('Within 25% of high','pass' if off>=-25 else 'fail',f'{off:+.1f}% from the 52-week high.'))
+    rs=number(context.get('rs63'))
+    if rs is not None:items.append(('Beating SPY','pass' if rs>0 else 'fail',f'{rs:+.1f} pp over 63 sessions.'))
+    for name in ('VCP','PEG'):
+        if name in setups:items.append((name,'pass' if setups[name]['found'] else 'na',setups[name]['reason']))
+    pattern=tech.get('pattern',{})
+    items.append(('High tight flag','pass' if pattern.get('found') else 'na',pattern.get('reason','')))
+    if fund_state!='NOT APPLICABLE':
+        items.append(('Fundamentals','pass' if fund_state=='SUPPORTIVE' else 'warn',fund_state))
+    if earnings_days is not None and 0<=earnings_days<=7:
+        items.append((f'Earnings in {earnings_days}d','warn','A report inside the trade window can gap through the stop.'))
+    return items

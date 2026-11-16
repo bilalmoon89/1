@@ -11,6 +11,29 @@ CSS='''<style>
 </style>'''
 
 
+CSS+='''<style>
+.tc-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:2px 0 10px}
+.tc-id b{font:600 30px/1 var(--serif,Georgia,serif);color:#F0EDE6;letter-spacing:.01em}
+.tc-id span{display:block;margin-top:5px;font-size:13px;color:#C9D3DF}.tc-id small{display:block;margin-top:2px;font-size:11.5px;color:#A9B6C6}
+.tc-price{text-align:right}.tc-price b{display:block;font:600 26px/1 var(--mono,monospace);color:#F0EDE6;font-variant-numeric:tabular-nums}
+.tc-price small{display:block;margin-top:5px;font-size:11.5px;color:#A9B6C6}
+.tc-verdict{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:center;border:1px solid #5E4C25;border-left:4px solid #B8922A;background:#1B1810;border-radius:6px;padding:11px 14px;margin-bottom:10px}
+.tc-verdict b{font:700 15px var(--sans,sans-serif);letter-spacing:.05em;color:#D4A840;white-space:nowrap}.tc-verdict span{font-size:13px;line-height:1.45;color:#D5DEE8}
+.tc-verdict.no{border-color:#5a2f3a;border-left-color:#F47F8E;background:#22161d}.tc-verdict.no b{color:#F47F8E}
+.tc-verdict.go{border-color:#23503f;border-left-color:#45D6A0;background:#10211d}.tc-verdict.go b{color:#45D6A0}
+.tc-checks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tc-chip{font:500 12px var(--sans,sans-serif);border-radius:20px;padding:5px 10px;border:1px solid #2C3A4C;background:#121C29;color:#B9C5D3;white-space:nowrap}
+.tc-chip i{font-style:normal;font-weight:700;margin-right:5px}
+.tc-chip.pass{border-color:#23503f;color:#8fe6c3}.tc-chip.fail{border-color:#5a2f3a;color:#f6a3ae}.tc-chip.warn{border-color:#5E4C25;color:#E3C77E}
+.tc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:0;background:#101925;border:1px solid #253244;border-radius:6px;overflow:hidden;margin-bottom:10px}
+.tc-kpi{background:#101925;padding:9px 12px;min-width:0;border-right:1px solid #253244;border-bottom:1px solid #253244;margin:0 -1px -1px 0}.tc-kpi small{display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#A9B6C6}
+.tc-kpi b{display:block;margin-top:4px;font:600 17px var(--mono,monospace);color:#F0EDE6;font-variant-numeric:tabular-nums}
+.tc-kpi span{display:block;margin-top:2px;font-size:11px;color:#A9B6C6}.tc-kpi.up b{color:#45D6A0}.tc-kpi.down b{color:#F47F8E}.tc-kpi.warn b{color:#E3C77E}
+.tc-values b{font-size:18px}
+.tc-plan-entry b{color:#D4A840}.tc-plan-stop b{color:#F47F8E}.tc-plan-target b{color:#45D6A0}
+@media(max-width:680px){.tc-top{flex-direction:column;align-items:flex-start;gap:8px}.tc-price{text-align:left}.tc-verdict{grid-template-columns:1fr}.tc-verdict b{white-space:normal}.tc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>'''
+
 def tag(text):
     tone='bad' if any(v in text for v in ('NO GO','BELOW','CAUTION','INCOMPLETE')) else 'caution' if any(v in text for v in ('UNTESTED','UNKNOWN','NOT DETECTED')) else ''
     return f'<span class="tc-tag {tone}">{e(text)}</span>'
@@ -25,44 +48,99 @@ def multiple(value):
     return f'{n:.1f}×' if n is not None and n>0 else '—'
 
 
-def dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations,r40=None):
+CHIP_MARK={'pass':'✓','fail':'✕','warn':'!','na':'·'}
+
+
+def fmt(value,pattern='{:+.1f}%'):
+    n=number(value)
+    return pattern.format(n) if n is not None else '—'
+
+
+def dollars(value):
+    n=number(value)
+    if n is None:return '—'
+    return f'${n/1e9:.1f}B' if n>=1e9 else f'${n/1e6:.0f}M'
+
+
+def kpi(label,value,tone='',sub=''):
+    return f'<div class="tc-kpi {tone}"><small>{e(label)}</small><b>{e(value)}</b>'+(f'<span>{e(sub)}</span>' if sub else '')+'</div>'
+
+
+def signed_tone(value):
+    n=number(value)
+    return '' if n is None else 'up' if n>=0 else 'down'
+
+
+def dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations,r40=None,extra=None):
+    """One screen: identity and price, verdict, gate checklist, key numbers, then plan / trend / fundamentals / valuation."""
     r40=r40 or {'score':None,'status':'UNAVAILABLE','period':''}
-    info=data['info'];stage=tech.get('stage',{});pattern=tech.get('pattern',{})
-    head=f'<div class="tc-head"><b>{e(symbol)} <span class="muted">/ {e(info.get("shortName",symbol))}</span></b><small>Daily {e(tech.get("asof","unavailable"))} · Retrieved {e(data["retrieved"][11:19])} ET</small></div>'
-    head+=f'<div class="tc-decision {"no" if combined.startswith("NO GO") else ""}"><b>{e(combined)}</b><span>{e(tech["reason"])}</span></div>'
-    summary='<div class="tc-summary">'
-    for label,value,detail in [(f'FUNDAMENTALS · {len(quarters)}/5 QUARTERS',fund_state,f'{len(quarters)}/5 reported quarters'),('STAGE ANALYSIS',stage.get('stage','UNKNOWN'),'Completed weekly · 30-week SMA'),('HIGH TIGHT FLAG','PREFERRED CANDIDATE' if pattern.get('found') else 'NOT DETECTED','Price + duration + volume checks'),(('RULE OF 40 · TTM '+r40['period'] if r40['period'] else 'RULE OF 40 · TTM'),f'{r40["score"]:.1f} · {r40["status"]}' if r40.get('score') is not None else 'UNAVAILABLE','Latest TTM revenue growth + matching TTM FCF margin; software/SaaS reference')]:
-        summary+=f'<div class="tc-stat" title="{e(detail)}"><small>{e(label)}</small><b>{e(value)}</b></div>'
-    summary+='</div>'
-    if quarters.empty:fund='<div class="tc-note">Quarterly statements unavailable.</div>'
+    extra=extra or {}
+    context=extra.get('context') or {};earnings=extra.get('earnings') or {}
+    info=data['info'];averages=tech['averages']
+    name=info.get('shortName') or info.get('longName') or symbol
+    sector=' · '.join(str(x) for x in (info.get('sector'),info.get('industry')) if x)
+    if quote.get('valid'):
+        price=f'{quote["price"]:,.2f}';price_note=f'TradingView · {quote["feed"]} · {quote["updated"][11:19]} ET'
     else:
-        display=quarters.drop(columns=['Net income'],errors='ignore').copy().round(2)
-        for column in ('Revenue',):
-            display[column]=display[column].map(lambda v:f'{float(v)/1e9:.2f}B' if number(v) is not None else '—')
-        display=display.rename(columns={'Period end':'Quarter end','Operating margin %':'Op margin %','Revenue YoY %':'Rev YoY %','Diluted EPS':'EPS'})
-        fund=leaders_table(display)
-    fundamentals=box('Fundamentals · five quarters',f'{info.get("financialCurrency","Currency unverified")} · B=billion · YoY {int(quarters["Revenue YoY %"].notna().sum()) if not quarters.empty else 0}/5',fund)
-    averages=tech['averages']
+        price=f'{tech["price"]:,.2f}' if number(tech.get('price')) is not None else '—'
+        price_note=f'Daily close {tech.get("asof","unavailable")} · live quote {str(quote.get("status","unavailable")).split(" · ")[0].lower()}'
+    head=(f'<div class="tc-top"><div class="tc-id"><b>{e(symbol)}</b><span>{e(name)}</span>'+(f'<small>{e(sector)}</small>' if sector else '')
+        +f'</div><div class="tc-price"><b>{e(price)}</b><small>{e(price_note)}</small></div></div>')
+    tone='no' if combined.startswith('NO GO') else 'go' if combined.startswith('CONDITIONAL') else ''
+    head+=f'<div class="tc-verdict {tone}"><b>{e(combined)}</b><span>{e(tech["reason"])}</span></div>'
+    checks=''.join(f'<span class="tc-chip {state}" title="{e(detail)}"><i>{CHIP_MARK.get(state,"·")}</i>{e(label)}</span>' for label,state,detail in extra.get('checks') or [])
+    if checks:head+=f'<div class="tc-checks">{checks}</div>'
+    tiles=[]
+    if context:
+        tiles+=[kpi('vs 200 SMA',fmt(context.get('vs200')),signed_tone(context.get('vs200'))),
+            kpi('Off 52W high',fmt(context.get('off_high')),'' if (number(context.get('off_high')) or -100)>=-25 else 'down'),
+            kpi('RS 63D vs SPY',fmt(context.get('rs63'),'{:+.1f} pp'),signed_tone(context.get('rs63'))),
+            kpi('vs 8 EMA',fmt(context.get('ext8'),'{:+.1f} ATR'),'warn' if (number(context.get('ext8')) or 0)>2.5 else ''),
+            kpi('ATR 14',fmt(context.get('atr_pct'),'{:.1f}%'),'',f'ADR 20D {fmt(context.get("adr20"),"{:.1f}%")}'),
+            kpi('Avg $ volume 50D',dollars(context.get('dollar_volume')))]
+    if earnings.get('next'):
+        days=earnings.get('days')
+        tiles.append(kpi('Next earnings',earnings['next'],'warn' if days is not None and days<=7 else '',f'in {days} days' if days else 'today' if days==0 else ''))
+    kpis='<div class="tc-kpis">'+''.join(tiles)+'</div>' if tiles else ''
+    # Trade plan
+    levels='<div class="tc-values">'
+    for label,key,cls in [('ENTRY','entry','tc-plan-entry'),('STOP','stop','tc-plan-stop'),('TARGET','target','tc-plan-target'),('REWARD / RISK','rr','')]:
+        value=number(tech.get(key));display=(f'{value:.2f}'+('R' if key=='rr' else '')) if value is not None else '—'
+        levels+=f'<div class="{cls}"><small>{label}</small><b>{display}</b></div>'
+    levels+='</div>'
+    entry=number(tech.get('entry'));stop=number(tech.get('stop'))
+    if entry and stop and entry>stop:
+        levels+=f'<div class="tc-strip"><span>Risk per share <b>{entry-stop:.2f}</b> · <b>{(entry-stop)/entry*100:.1f}%</b></span>'+(f'<span>Basis <b>{e(extra["plan_source"])}</b></span>' if extra.get('plan_source') else '')+'</div>'
+    levels+='<div class="tc-note">Conditional levels only · blank = not established. Fresh intraday confirmation required.</div>'
+    plan=box('Trade plan','Structural invalidation · ≥2R required',levels)
+    # Trend and support
     if averages.empty:trend='<div class="tc-note">Insufficient completed price history.</div>'
     else:
         rows=''.join(f'<tr><td>{e(r["Average"].replace(" · completed weeks",""))}</td><td>{float(r["Value"]):.2f}</td><td>{tag(r["State"])}</td></tr>' if number(r['Value']) is not None else f'<tr><td>{e(r["Average"])}</td><td>—</td><td>{tag(r["State"])}</td></tr>' for _,r in averages.iterrows())
         trend='<div class="table-scroll"><table class="terminal-table"><thead><tr><th>Average</th><th>Level</th><th>Support</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
     last=f'{tech["price"]:.2f}' if number(tech.get('price')) is not None else '—'
-    trend+=f'<div class="tc-strip"><span>Last daily close <b>{last}</b></span><span>200 SMA = hard veto</span></div>'
+    stage=tech.get('stage',{}).get('stage','UNKNOWN')
+    trend+=f'<div class="tc-strip"><span>Last daily close <b>{last}</b></span><span>Stage <b>{e(stage)}</b></span><span>200 SMA = hard veto</span></div>'
     technical=box('Trend & support','Daily + completed weekly',trend)
+    # Fundamentals
+    if fund_state=='NOT APPLICABLE':fund='<div class="tc-note">Not a reporting company (ETF, future or index): fundamentals are not applicable. The technical review decides.</div>'
+    elif quarters.empty:fund='<div class="tc-note">Quarterly statements unavailable.</div>'
+    else:
+        display=quarters.drop(columns=['Net income'],errors='ignore').copy().round(2)
+        display['Revenue']=display['Revenue'].map(lambda v:'—' if number(v) is None else f'{float(v)/1e9:.2f}B' if abs(float(v))>=1e9 else f'{float(v)/1e6:.0f}M' if abs(float(v))>=1e6 else f'{float(v):,.0f}')
+        display=display.rename(columns={'Period end':'Quarter end','Operating margin %':'Op margin %','Revenue YoY %':'Rev YoY %','Diluted EPS':'EPS'})
+        order=[c for c in ('Quarter end','Revenue','Rev YoY %','EPS','EPS YoY %','Gross margin %','Op margin %','Net margin %') if c in display.columns]
+        fund=leaders_table(display[order])
+    rule=f'{r40["score"]:.1f} · {r40["status"]}' if r40.get('score') is not None else 'UNAVAILABLE'
+    if fund_state!='NOT APPLICABLE':
+        fund+=f'<div class="tc-strip"><span>Review <b>{e(fund_state)}</b></span><span title="Latest TTM revenue growth + matching TTM FCF margin; software/SaaS reference">RULE OF 40 · TTM {e(r40["period"])} <b>{e(rule)}</b></span></div>'
+    fundamentals=box('Fundamentals · five quarters',f'{info.get("financialCurrency","Currency unverified")} · B/M = billions/millions · YoY {int(quarters["Revenue YoY %"].notna().sum()) if not quarters.empty else 0}/5',fund)
+    # Valuation
     metrics='<div class="tc-values">'
     for label,key in [('P/E TTM','trailingPE'),('Forward P/E','forwardPE'),('P/S TTM','priceToSalesTrailing12Months'),('EV/EBITDA','enterpriseToEbitda')]:
         metrics+=f'<div><small>{label}</small><b>{multiple(info.get(key))}</b></div>'
     metrics+='</div>'
-    if len(valuations)>=2:metrics+=f'<div class="tc-strip"><span>Year-end P/E mean <b>{valuations["P/E"].mean():.1f}×</b></span><span>Median <b>{valuations["P/E"].median():.1f}×</b></span><span>{len(valuations)} fiscal years</span></div>'
+    if len(valuations)>=2:metrics+=f'<div class="tc-strip"><span>Year-end P/E mean <b>{valuations["P/E"].mean():.1f}×</b></span><span>Median <b>{valuations["P/E"].median():.1f}×</b></span><span>{len(valuations)} fiscal years</span></div><div class="tc-note">Annual snapshots, not a daily historical average.</div>'
     else:metrics+='<div class="tc-note">Historical P/E reference unavailable.</div>'
-    metrics+='<div class="tc-note">Annual snapshots, not a daily historical average.</div>'
     valuation=box('Valuation','Forward P/E = estimate',metrics)
-    levels='<div class="tc-values">'
-    for label,key in [('ENTRY','entry'),('STOP','stop'),('TARGET','target'),('REWARD / RISK','rr')]:
-        value=number(tech.get(key));display=f'{value:.2f}'+('R' if key=='rr' else '') if value is not None else '—'
-        levels+=f'<div><small>{label}</small><b>{display}</b></div>'
-    levels+='</div><div class="tc-note">Conditional levels only · blank = not established. Fresh intraday confirmation required.</div>'
-    plan=box('Trade plan','Structural invalidation · ≥2R required',levels)
-    quote_html=(f'<b>TradingView {quote["price"]:.2f}</b> · SMA200 {quote["sma200"]:.2f} · {e(quote["feed"])} · {e(quote["updated"])}' if quote.get('valid') else e(quote['status']))
-    return head+summary+'<div class="tc-grid">'+fundamentals+technical+valuation+plan+'</div>'+f'<div class="tc-note">{quote_html}</div>'
+    return head+kpis+'<div class="tc-grid">'+plan+technical+fundamentals+valuation+'</div>'

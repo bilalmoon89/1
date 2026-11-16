@@ -4,7 +4,7 @@ import streamlit as st
 from crescent_engine import complete_daily
 from liquid_uptrend import LiquidFilters, screen_history, screen_intraday, apply_exclusions
 from terminal_view import table, e
-from liquid_table import leaders_table, leaders_frame
+from liquid_table import leaders_table, leaders_frame, leaders_summary
 
 
 DEFAULTS={'lu_volume':1_000_000.0,'lu_dollar':100_000_000.0,'lu_200':.01,'lu_50':.01,'lu_adr1':3.0,'lu_adr20':3.0,
@@ -27,8 +27,10 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now,quote_lo
     scope=left.selectbox('Liquid scan universe',['Full 574','TradingView US · top 1,500','Balanced 120','Balanced 60'],key='lu_scope')
     mode=st.radio('Data view',['Intraday · TradingView','Completed daily'],horizontal=True,key='lu_mode')
     custom=st.text_input('Additional tickers',placeholder='Add symbols beyond the stock list, e.g. COHR, LITE, IONQ',key='lu_extra')
-    st.caption('Intraday: session price, range, SMA and VWAP from TradingView; 20D volume and 50D dollar volume remain completed-session averages. Feed delay and quote time are shown. After the close, the current regular-session snapshot is shown; before the open or on non-trading days, the latest completed regular session is labelled with its date. Extended-hours quotes are not included. Custom tickers also pass every standard filter.')
-    if scope.startswith('TradingView US'):st.caption('US primary stocks above SMA50 and SMA200, ranked by 90D average volume; discovery is capped at 1,500. Exact liquidity, ADR and exclusions are checked afterward. A first scan can take several minutes; partial matches appear while it runs.')
+    with st.expander('How this scan works',expanded=False):
+        st.caption('Intraday uses the session price, range, SMA and VWAP from TradingView; 20D volume and 50D dollar volume are completed-session averages. After the close the regular-session snapshot is shown; before the open or on non-trading days the latest completed session is shown with its date. Extended-hours quotes are not included. Additional tickers must pass every filter too.')
+        st.caption('RS rank (1–99) is the percentile of the 63-session return across every history loaded in this scan; it needs at least 20 histories. Off 52W high is the distance below the 52-week high. Setup reads TIGHT · 8 EMA when the last sessions meet the Standard tight-candle rule from the VCP & PEG page, and EXTENDED when price is more than 2.5 ATR above the 21 EMA.')
+        if scope.startswith('TradingView US'):st.caption('TradingView US: primary stocks above SMA50 and SMA200, ranked by 90D average volume, capped at 1,500. Exact liquidity, ADR and exclusions are checked afterward. A first scan can take several minutes; partial matches appear while it runs.')
     right.button('Restore standard preset',on_click=reset_preset,width='stretch')
     with st.expander('Filters / exclusions · standard preset',expanded=False):
         first=st.columns(3)
@@ -58,7 +60,6 @@ def render_liquid_page(daily_loader,industry_loader,universe_loader,now,quote_lo
         if st.button('Refresh quotes',disabled=bool(job.get('active'))):
             if hasattr(quote_loader,'clear'):quote_loader.clear()
             job['quote_refresh']=0
-    st.caption('Quote ET and Retrieved ET show Eastern Time. This is a saved snapshot of the regular session, not an after-hours feed. After the scan finishes, use Refresh quotes to revalidate it.')
     polling=bool(job and job.get('active') and job.get('scope')==scope and job.get('custom','')==custom)
     st.fragment(run_every='2s' if polling else None)(scan_results)(daily_loader,industry_loader,scope,now,
         LiquidFilters(volume,dollar,sma200,sma50,adr1,adr20),exclude_pharma,excluded,keywords,mode,quote_loader,custom)
@@ -120,8 +121,8 @@ def scan_results(daily_loader,industry_loader,scope,now,filters,exclude_pharma,e
     if result.empty:st.info('No verified stocks pass every selected condition in the available data. Check data coverage below for missing or stale quotes. The preset has not been relaxed.')
     else:
         display=leaders_frame(result)
-        st.markdown(leaders_table(display),unsafe_allow_html=True)
-        st.download_button('Export liquid matches CSV',display.to_csv(index=False),file_name='Crescent_Liquid_Uptrend.csv',mime='text/csv')
+        st.markdown(leaders_summary(result)+leaders_table(display),unsafe_allow_html=True)
+        st.download_button('Export liquid matches CSV',result.to_csv(index=False),file_name='Crescent_Liquid_Uptrend.csv',mime='text/csv')
     if not excluded_rows.empty:
         with st.expander(f'Excluded after technical checks · {len(excluded_rows)}'):
             st.markdown(table(excluded_rows),unsafe_allow_html=True)

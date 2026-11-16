@@ -73,6 +73,24 @@ Each row shows trigger, stop, risk %, the pullback sequence or gap details, and 
 - BRK.B / BF.B are requested from Yahoo as BRK-B / BF-B. Your own list is always scanned, with a warning for any ticker that could not be.
 - Ticker Check uses the same Wilder ATR as the scanner. Demo-mode leftovers and unused imports were removed, and `use_container_width` was replaced.
 
+## Ticker Check and Liquid Uptrend (7.9.0)
+
+**Ticker Check** is one screen: name and price, the verdict, a gate checklist, key numbers, then trade plan, trend, fundamentals and valuation, with the daily candlestick chart below.
+
+- The gate checklist shows each rule as passed, failed, caution or not present: 200 SMA, stage 2, 8 / 21 / 50 EMA, weekly 8 EMA, distance from the 52-week high, strength vs SPY, VCP, PEG, high tight flag, fundamentals, and earnings within 7 days.
+- The VCP and PEG rules from the scanner (Standard preset) now run on the ticker. When the trend passes but no entry was defined, the plan uses the scanner's trigger and stop and names its basis. A NO GO is never overridden.
+- Key numbers: vs 200 SMA, off 52-week high, 63-session strength vs SPY, distance from the 8 EMA in ATR, ATR and ADR, average dollar volume, next earnings date.
+- Daily averages are 8 / 21 / 50 EMA (was 9 / 21 / 50), matching the scanner. The chart is a candlestick with the entry, stop and target drawn, and is no longer hidden in an expander.
+- Fundamentals add EPS YoY (blank when the year-earlier EPS is zero or negative) and scale revenue to billions or millions. ETFs, futures and indexes skip the fundamentals gate.
+- Chart averages on every page are now computed on the full history before the window is cut, so their first values are correct.
+
+**Liquid Uptrend**
+
+- RS rank (1–99): percentile of the 63-session return across every history loaded in the scan (20 or more needed). Completed-daily results are sorted by it.
+- Off 52W high, and a Setup label: `TIGHT · 8 EMA` when the Standard tight-candle rule passes, `EXTENDED` when price is more than 2.5 ATR above the 21 EMA.
+- Leading groups: the industries with the most leaders. Feed details that are the same on every row are shown once above the table instead of as six columns. The CSV export keeps every column.
+- The explanatory text moved into a "How this scan works" expander.
+
 ## Scan tiers (7.8.2)
 
 The VCP & PEG page has three scan sizes. Each one scans the commodities and ETFs first, then US stocks ranked by average daily dollar volume (price × 90-day average volume) behind a $10 price and $20M/day floor.

@@ -14,14 +14,39 @@ class LiquidFilters:
     adr20:float=3.0
 
 
+def _strength(f,close):
+    """63-session return, distance from the 52-week high, and a tight / extended label."""
+    from crescent_engine import atr14
+    out={'63D %':None,'Off 52W high':None,'Setup':''}
+    try:
+        if len(f)>=64 and float(f.Close.iloc[-64])>0:out['63D %']=(close/float(f.Close.iloc[-64])-1)*100
+        out['Off 52W high']=(close/max(float(f.High.tail(252).max()),close)-1)*100
+        from setup_scanner import tight_area,PRESETS
+        tight,_=tight_area(f,PRESETS['Standard'])
+        atr=atr14(f);ema21=float(f.Close.ewm(span=21,adjust=False).mean().iloc[-1])
+        out['Setup']='TIGHT · 8 EMA' if tight else 'EXTENDED' if atr and (close-ema21)/atr>2.5 else ''
+    except Exception:pass
+    return out
+
+
+def _rank(rows,returns):
+    """RS rank 1-99: percentile of the 63-session return across every loaded history (20 or more needed)."""
+    ranks={}
+    if len(returns)>=20:
+        ranks=(pd.Series(returns).rank(pct=True)*99).clip(1,99).round().to_dict()
+    for row in rows:row['RS rank']=ranks.get(row['Symbol'])
+    return bool(ranks)
+
+
 PHARMA_KEYS=('biotechnology','drug-manufacturers','diagnostics-research')
 
 
 def screen_history(history,filters=None):
     filters=filters or LiquidFilters()
-    rows=[];unavailable={}
+    rows=[];unavailable={};returns={}
     for symbol,raw in history.items():
         f=normalise(raw)
+        if len(f)>=64 and float(f.Close.iloc[-64])>0:returns[symbol]=float(f.Close.iloc[-1])/float(f.Close.iloc[-64])-1
         if len(f)<200:
             unavailable[symbol]=f'{len(f)} daily bars; 200 required'
             continue
@@ -39,9 +64,11 @@ def screen_history(history,filters=None):
         if not all(finite(x) and x>limit for x,limit in zip(values,thresholds)):continue
         rows.append({'Symbol':symbol,'Close':round(close,2),'Avg volume 20D':round(vol),
             'Avg $ volume 50D':round(dollar),'Vs SMA200 %':round(above200,2),'Vs SMA50 %':round(above50,2),
-            'ADR 1D %':round(adr1,2),'ADR 20D %':round(adr20,2),'As of':str(f.index[-1].date())})
+            'ADR 1D %':round(adr1,2),'ADR 20D %':round(adr20,2),**_strength(f,close),'As of':str(f.index[-1].date())})
+    ranked=_rank(rows,returns)
     result=pd.DataFrame(rows)
-    if not result.empty:result=result.sort_values('Avg $ volume 50D',ascending=False).reset_index(drop=True)
+    # Strongest first when a universe-wide rank exists; otherwise most liquid first.
+    if not result.empty:result=result.sort_values(['RS rank','Avg $ volume 50D'] if ranked else 'Avg $ volume 50D',ascending=False).reset_index(drop=True)
     return result,unavailable
 
 
@@ -86,7 +113,7 @@ def screen_intraday(history,quotes,now,filters=None):
     from zoneinfo import ZoneInfo
     from session_validity import session_clock,regular_status
     filters=filters or LiquidFilters()
-    rows=[];missing={};et=ZoneInfo('America/New_York')
+    rows=[];missing={};returns={};et=ZoneInfo('America/New_York')
     now=now.astimezone(et)
     for symbol,raw in history.items():
         f=normalise(raw);q=quotes.get(symbol,{})
@@ -105,6 +132,7 @@ def screen_intraday(history,quotes,now,filters=None):
             sma200=float(q['SMA200']);sma50=float(q['SMA50'])
             vol=float(f.Volume.tail(20).mean());dollar=float((f.Close*f.Volume).tail(50).mean())
             if close<=0 or high<low or sma200<=0 or sma50<=0:raise ValueError('Invalid session prices')
+            if len(f)>=63 and float(f.Close.iloc[-63])>0:returns[symbol]=close/float(f.Close.iloc[-63])-1
             above200=(close/sma200-1)*100;above50=(close/sma50-1)*100
             adr1=(high-low)/close*100
             adr20=((f.High.tail(19).sum()+high)-(f.Low.tail(19).sum()+low))/20/close*100
@@ -119,10 +147,11 @@ def screen_intraday(history,quotes,now,filters=None):
                 'From open %':q.get('change_from_open'),'Vs VWAP %':(close/vwap-1)*100 if finite(vwap) and vwap>0 else None,
                 'Session volume':q.get('volume'),'RVOL':q.get('relative_volume_10d_calc'),
                 'Avg volume 20D':vol,'Avg $ volume 50D':dollar,'Vs SMA200 %':above200,'Vs SMA50 %':above50,
-                'ADR 1D %':adr1,'ADR 20D %':adr20,'Quote ET':stamp.isoformat(timespec='seconds'),
+                'ADR 1D %':adr1,'ADR 20D %':adr20,**_strength(f,close),'Quote ET':stamp.isoformat(timespec='seconds'),
                 'Session':str(session.date()),'Session status':status,'Feed':mode,'Source':'TradingView','Retrieved ET':q.get('retrieved',''),
                 'Baseline through':str(f.index[-1].date())})
         except (KeyError,ValueError,TypeError,OverflowError,OSError) as exc:missing[symbol]=str(exc)
+    _rank(rows,returns)
     result=pd.DataFrame(rows)
     if not result.empty:result=result.sort_values('Today %',ascending=False,na_position='last').reset_index(drop=True)
     return result,missing

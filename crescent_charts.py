@@ -5,15 +5,19 @@ from plotly.subplots import make_subplots
 from crescent_engine import normalise
 
 
-def candles(frame,plan=None,title='Daily structure',n=85):
-    f=normalise(frame).tail(n)
+def candles(frame,plan=None,title='Daily structure',n=85,spans=(9,21,50),sma=None):
+    full=normalise(frame);f=full.tail(n)
     if f.empty:return None
     fig=make_subplots(rows=2,cols=1,shared_xaxes=True,vertical_spacing=.025,row_heights=[.78,.22])
     fig.add_trace(go.Candlestick(x=f.index,open=f.Open,high=f.High,low=f.Low,close=f.Close,
                                 increasing_line_color='#51c3a0',decreasing_line_color='#e7848b',name='Price'),row=1,col=1)
-    for span,color in [(9,'#e2ae5e'),(21,'#6db0e6'),(50,'#aa99e0')]:
-        fig.add_trace(go.Scatter(x=f.index,y=f.Close.ewm(span=span,adjust=False,min_periods=span).mean(),
+    # Averages are computed on the full history, then cut to the window, so their first values are correct.
+    for span,color in zip(spans,('#e2ae5e','#6db0e6','#aa99e0')):
+        fig.add_trace(go.Scatter(x=f.index,y=full.Close.ewm(span=span,adjust=False,min_periods=span).mean().tail(n),
                                  mode='lines',line=dict(color=color,width=1.65),name=f'EMA {span}'),row=1,col=1)
+    if sma:
+        fig.add_trace(go.Scatter(x=f.index,y=full.Close.rolling(sma).mean().tail(n),mode='lines',
+                                 line=dict(color='#9fb0c3',width=1.3,dash='dot'),name=f'SMA {sma}'),row=1,col=1)
     if plan is not None:
         p=plan.to_dict() if hasattr(plan,'to_dict') else plan
         for name,value,color,dash in [('Trigger',p.get('trigger'),'#d6b16f','dash'),('Invalid',p.get('stop'),'#f28b94','dot'),('Next',p.get('target'),'#78c7c7','dot')]:
