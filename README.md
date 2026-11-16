@@ -73,6 +73,12 @@ Each row shows trigger, stop, risk %, the pullback sequence or gap details, and 
 - BRK.B / BF.B are requested from Yahoo as BRK-B / BF-B. Your own list is always scanned, with a warning for any ticker that could not be.
 - Ticker Check uses the same Wilder ATR as the scanner. Demo-mode leftovers and unused imports were removed, and `use_container_width` was replaced.
 
+## Changes in 7.8.1
+
+- VCP & PEG page: new universe **US market · price > $10 · $20M/day**. TradingView returns every US primary-listed stock above $10; the app keeps those with at least $20M average daily dollar volume (price × 90-day average volume), most liquid first, capped at 3,000.
+- There is no 200 SMA rule in this universe, so power earnings gaps out of a downtrend are included. Names more than 3% under their 50-day average are skipped before download, because neither setup can match them.
+- A full scan of this universe takes roughly 10–15 minutes on Yahoo. The other universes are unchanged.
+
 ## Design (7.8.0)
 
 - Brand from crescentinsights.net: the crescent mark (SVG), a Cormorant Garamond wordmark, Inter body text, brand gold `#B8922A` / `#D4A840` on navy `#0A101A`. Primary buttons are gold with navy text, as on the site.

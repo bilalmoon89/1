@@ -132,3 +132,21 @@ def test_scan_combines_setups_and_reports_reasons():
     out, reasons = scan(history)
     assert set(out.Symbol) == {'VCPX', 'GAPX'}
     assert 'FLAT' in reasons
+
+
+def test_expanded_universe_applies_price_liquidity_and_sma50_floor():
+    from liquid_data import filter_setup_universe
+    rows = pd.DataFrame([
+        {'name': 'BIG', 'close': 200.0, 'SMA50': 180.0, 'average_volume_90d_calc': 5_000_000},
+        {'name': 'MID', 'close': 40.0, 'SMA50': 41.0, 'average_volume_90d_calc': 600_000},      # 2.4% under SMA50: kept
+        {'name': 'TURN', 'close': 30.0, 'SMA50': 25.0, 'average_volume_90d_calc': 1_000_000},   # no 200 SMA rule
+        {'name': 'PRICEY', 'close': 8000.0, 'SMA50': 7800.0, 'average_volume_90d_calc': 20_000},
+        {'name': 'CHEAP', 'close': 9.5, 'SMA50': 9.0, 'average_volume_90d_calc': 50_000_000},
+        {'name': 'THIN', 'close': 50.0, 'SMA50': 45.0, 'average_volume_90d_calc': 300_000},     # $15M/day
+        {'name': 'WEAK', 'close': 50.0, 'SMA50': 60.0, 'average_volume_90d_calc': 2_000_000},   # far under SMA50
+        {'name': 'NEW', 'close': 50.0, 'SMA50': None, 'average_volume_90d_calc': 2_000_000},    # under 50 sessions
+        {'name': 'BIG', 'close': 200.0, 'SMA50': 180.0, 'average_volume_90d_calc': 5_000_000},
+    ])
+    assert filter_setup_universe(rows) == ['BIG', 'PRICEY', 'TURN', 'MID']
+    assert filter_setup_universe(rows, limit=2) == ['BIG', 'PRICEY']
+    assert filter_setup_universe(pd.DataFrame()) == []

@@ -84,3 +84,45 @@ def _discover_symbols():
 
 def discover_symbols():
     return bounded_call(_discover_symbols,timeout=12)
+
+
+# Expanded VCP / PEG universe: the whole US market behind a price and liquidity floor.
+SETUP_MIN_PRICE=10.0
+SETUP_MIN_DOLLAR_VOLUME=20_000_000
+SETUP_MAX_SYMBOLS=3000
+SETUP_SMA50_TOLERANCE=0.97
+SETUP_SCOPE='US market · price > $10 · $20M/day'
+
+
+def filter_setup_universe(frame,min_price=SETUP_MIN_PRICE,min_dollar_volume=SETUP_MIN_DOLLAR_VOLUME,
+        limit=SETUP_MAX_SYMBOLS,sma50_tolerance=SETUP_SMA50_TOLERANCE):
+    """Rank screener rows by average dollar volume and keep those that can still match.
+
+    Dollar volume = last price x 90-day average share volume. There is no 200 SMA
+    rule, so a power earnings gap out of a downtrend is kept. Both setups need the
+    completed close above the 50-day average, so names more than 3% under it (or
+    with fewer than 50 sessions) are dropped before any history is downloaded;
+    the 3% allowance covers an intraday dip while the last completed close qualifies.
+    """
+    import pandas as pd
+    if frame is None or len(frame)==0:return []
+    f=frame.copy()
+    for column in ('close','SMA50','average_volume_90d_calc'):
+        f[column]=pd.to_numeric(f[column],errors='coerce')
+    f=f.dropna(subset=['name','close','SMA50','average_volume_90d_calc'])
+    f['dollar']=f['close']*f['average_volume_90d_calc']
+    f=f[(f['close']>min_price)&(f['dollar']>=min_dollar_volume)&(f['close']>=sma50_tolerance*f['SMA50'])]
+    f=f.sort_values('dollar',ascending=False,kind='stable')
+    return list(dict.fromkeys(f['name'].astype(str).str.strip().str.upper()))[:limit]
+
+
+def _discover_setup_symbols():
+    from tradingview_screener import Query,col
+    _,frame=(Query().set_markets('america').select('name','close','SMA50','average_volume_90d_calc')
+        .where(col('type')=='stock',col('is_primary')==True,col('close')>SETUP_MIN_PRICE)
+        .order_by('average_volume_90d_calc',ascending=False).limit(8000).get_scanner_data(timeout=15))
+    return filter_setup_universe(frame)
+
+
+def discover_setup_symbols():
+    return bounded_call(_discover_setup_symbols,timeout=20)

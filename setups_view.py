@@ -5,6 +5,7 @@ import streamlit as st
 from crescent_engine import complete_daily
 from setup_scanner import PRESETS, Tightness, VCPRules, PEGRules, scan
 from terminal_view import table, e
+from liquid_data import SETUP_SCOPE
 
 BATCH=12
 EARNINGS_CHECK_LIMIT=30
@@ -63,9 +64,10 @@ def _display(part):
 def render_setups_page(daily_loader,universe_loader,earnings_loader,now):
     st.markdown('<div class="section-heading">VCP &amp; Power Earnings Gap <span>Tight 8 EMA accumulation · completed daily candles only</span></div>',unsafe_allow_html=True)
     left,mid,right=st.columns([1.3,1.2,1],vertical_alignment='bottom')
-    scope=left.selectbox('Universe',['Full 574','Balanced 120','Balanced 60','TradingView US · top 1,500','My list only'],key='su_scope')
+    scope=left.selectbox('Universe',['Full 574','Balanced 120','Balanced 60','TradingView US · top 1,500',SETUP_SCOPE,'My list only'],key='su_scope')
     setups=mid.multiselect('Setups',['VCP','PEG'],default=['VCP','PEG'],key='su_setups')
     preset=right.selectbox('Tightness',list(PRESETS),index=0,key='su_preset')
+    if scope==SETUP_SCOPE:st.caption('Every US primary-listed stock above $10 with at least $20M average daily dollar volume (price × 90D average volume), most liquid first, capped at 3,000. No 200 SMA rule, so earnings gaps out of a downtrend are included. Names more than 3% under their 50-day average are skipped, since neither setup can match them. Expect roughly 1,500–2,500 tickers and 10–15 minutes on Yahoo; matches appear while it runs.')
     custom=st.text_input('My list / additional tickers',placeholder='e.g. NVDA, COHR, ANF',key='su_extra')
     tight=_tightness_controls(preset)
     vcp_rules,peg_rules=_rule_controls()
@@ -90,7 +92,7 @@ def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules):
     now=datetime.now(now.tzinfo)
     job=st.session_state.get('setup_job')
     if not job:
-        st.info('Choose a universe and select Run setup scan. Full 574 takes a few minutes on Yahoo; matches appear while it runs.');return
+        st.info('Choose a universe and select Run setup scan. Full 574 takes a few minutes on Yahoo and the US market universe 10–15 minutes; matches appear while it runs.');return
     if job['active']:
         if st.button('Stop scan',key='setup_stop'):
             job['active']=False;st.rerun()
