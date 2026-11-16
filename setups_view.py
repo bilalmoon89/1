@@ -3,9 +3,9 @@ import re
 import pandas as pd
 import streamlit as st
 from crescent_engine import complete_daily
-from setup_scanner import PRESETS, Tightness, VCPRules, PEGRules, scan
+from setup_scanner import PRESETS, Tightness, VCPRules, PEGRules, scan, annotate
 from terminal_view import table, e
-from liquid_data import SETUP_SCOPE
+from liquid_data import SETUP_TIERS, COMMODITIES, SINA_FUTURES, complete_asia_daily
 
 BATCH=12
 EARNINGS_CHECK_LIMIT=30
@@ -43,7 +43,7 @@ def _rule_controls():
             PEGRules(gap_pct=gap,volume_mult=mult,lookback=int(look)))
 
 
-LEAD=['Symbol','Close','Trigger','Stop','Risk %']
+LEAD=['Symbol','Name','Close','Trigger','Stop','Risk %']
 SPECIFIC={'VCP':['Pullbacks','Contractions','Pivot','Vs pivot %','Base days','Base vol dry-up'],
           'PEG':['Gap date','Gap %','Gap volume x','Gap-day low','Days since gap','Earnings']}
 TAIL=['EMA','Vs EMA ATR','Tight days','Close spread %','Volume vs 50D','RS 63D vs SPY pp','As of']
@@ -56,18 +56,25 @@ def _display(part):
     part=part.dropna(axis=1,how='all')
     order=[c for c in LEAD+SPECIFIC.get(setup,[])+TAIL if c in part.columns]
     part=part[order].copy()
+    if 'Name' in part and not part['Name'].astype(str).str.len().any():part=part.drop(columns='Name')
     for c in ('Contractions','Base days','Days since gap','Tight days'):
         if c in part:part[c]=part[c].astype('Int64')
     return part
 
 
-def render_setups_page(daily_loader,universe_loader,earnings_loader,now):
+STOCK_LIST='Stock list · 574'
+
+
+def render_setups_page(daily_loader,universe_loader,earnings_loader,now,etf_names=None):
     st.markdown('<div class="section-heading">VCP &amp; Power Earnings Gap <span>Tight 8 EMA accumulation · completed daily candles only</span></div>',unsafe_allow_html=True)
     left,mid,right=st.columns([1.3,1.2,1],vertical_alignment='bottom')
-    scope=left.selectbox('Universe',['Full 574','Balanced 120','Balanced 60','TradingView US · top 1,500',SETUP_SCOPE,'My list only'],key='su_scope')
+    scope=left.selectbox('Universe',list(SETUP_TIERS)+[STOCK_LIST,'My list only'],key='su_scope')
     setups=mid.multiselect('Setups',['VCP','PEG'],default=['VCP','PEG'],key='su_setups')
     preset=right.selectbox('Tightness',list(PRESETS),index=0,key='su_preset')
-    if scope==SETUP_SCOPE:st.caption('Every US primary-listed stock above $10 with at least $20M average daily dollar volume (price × 90D average volume), most liquid first, capped at 3,000. No 200 SMA rule, so earnings gaps out of a downtrend are included. Names more than 3% under their 50-day average are skipped, since neither setup can match them. Expect roughly 1,500–2,500 tickers and 10–15 minutes on Yahoo; matches appear while it runs.')
+    if scope in SETUP_TIERS:
+        count={500:'the 500 most liquid',1500:'the 1,500 most liquid'}.get(SETUP_TIERS[scope],'all')
+        timing={500:'about 3–4 minutes',1500:'about 7–10 minutes'}.get(SETUP_TIERS[scope],'10–15 minutes or more')
+        st.caption(f'Scans {len(COMMODITIES)} commodities (Yahoo front-month futures, plus SHFE hot-rolled coil HC1! from Sina), the {len(etf_names or {})} ETFs in etfs.csv, and {count} US stocks above $10 with at least $20M average daily dollar volume. Stocks more than 3% under their 50-day average are skipped, since neither setup can match them. Expect {timing} on Yahoo; commodities and ETFs load first. For ETFs and commodities a PEG row is a power gap, not an earnings gap.')
     custom=st.text_input('My list / additional tickers',placeholder='e.g. NVDA, COHR, ANF',key='su_extra')
     tight=_tightness_controls(preset)
     vcp_rules,peg_rules=_rule_controls()
@@ -75,24 +82,27 @@ def render_setups_page(daily_loader,universe_loader,earnings_loader,now):
     if st.button('Run setup scan',type='primary',width='stretch'):
         extras=[x.upper() for x in re.split(r'[\s,;]+',custom.strip()) if re.fullmatch(r'[A-Za-z][A-Za-z0-9.\-]{0,14}',x)]
         try:
-            base=[] if scope=='My list only' else list(universe_loader(scope))
+            base,note=([],'') if scope=='My list only' else universe_loader(scope)
         except Exception as exc:
             st.error(f'Could not load the universe: {str(exc)[:160]}');return
         symbols=list(dict.fromkeys(['SPY']+extras+base))
         if len(symbols)<=1:st.warning('Add at least one ticker.');return
-        st.session_state.setup_job={'symbols':symbols,'done':0,'history':{},'failures':{},'active':True,'scope':scope,'extras':extras}
+        st.session_state.setup_job={'symbols':symbols,'done':0,'history':{},'failures':{},'active':True,'scope':scope,'extras':extras,'note':note}
         st.session_state.pop('setup_earnings',None)
     job=st.session_state.get('setup_job')
     polling=bool(job and job.get('active'))
-    st.fragment(run_every='2s' if polling else None)(_results)(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules)
+    names=dict(etf_names or {});names.update(COMMODITIES)
+    st.fragment(run_every='2s' if polling else None)(_results)(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules,names)
 
 
-def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules):
+def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules,names=None):
+    names=names or {}
     from datetime import datetime
     now=datetime.now(now.tzinfo)
     job=st.session_state.get('setup_job')
     if not job:
-        st.info('Choose a universe and select Run setup scan. Full 574 takes a few minutes on Yahoo and the US market universe 10–15 minutes; matches appear while it runs.');return
+        st.info('Choose a scan and select Run setup scan. Core takes a few minutes, Medium and Full longer; matches appear while it runs.');return
+    if job.get('note'):st.warning(job['note'])
     if job['active']:
         if st.button('Stop scan',key='setup_stop'):
             job['active']=False;st.rerun()
@@ -100,7 +110,7 @@ def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules):
         with st.spinner(f"Loading {job['done']+1}–{job['done']+len(batch)} of {len(job['symbols'])}…"):
             try:raw,fail=daily_loader(batch)
             except Exception as exc:raw,fail={},dict.fromkeys(batch,str(exc)[:160])
-        job['history'].update({s:complete_daily(f,now) for s,f in raw.items() if s in batch})
+        job['history'].update({s:complete_asia_daily(f,now) if s in SINA_FUTURES else complete_daily(f,now) for s,f in raw.items() if s in batch})
         job['failures'].update(fail)
         job['done']+=len(batch)
         if job['done']>=len(job['symbols']):
@@ -113,7 +123,7 @@ def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules):
     matches,reasons=scan(history,spy,tuple(setups),tight,vcp_rules,peg_rules,st.session_state.get('setup_earnings'))
     # Earnings check for PEG rows once the scan is finished (bounded, cached per ticker for a day).
     if not job['active'] and 'PEG' in setups and not matches.empty and st.session_state.get('setup_earnings') is None:
-        pegs=list(matches.loc[matches.Setup=='PEG','Symbol'])[:EARNINGS_CHECK_LIMIT]
+        pegs=[x for x in matches.loc[matches.Setup=='PEG','Symbol'] if x not in names][:EARNINGS_CHECK_LIMIT]
         found={}
         with st.spinner(f'Checking earnings dates for {len(pegs)} gap candidates…'):
             for s in pegs:
@@ -121,6 +131,7 @@ def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules):
                 if dates:found[s]=dates
         st.session_state.setup_earnings=found
         matches,reasons=scan(history,spy,tuple(setups),tight,vcp_rules,peg_rules,found)
+    matches=annotate(matches,names)
     status='Scanning · partial results' if job['active'] else f"Scan complete · {now.strftime('%H:%M')} ET"
     st.markdown(f'<div class="section-heading">Setups <span>{len(matches)} matches · {len(history)} histories · {e(status)}</span></div>',unsafe_allow_html=True)
     if matches.empty:

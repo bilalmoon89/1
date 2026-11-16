@@ -19,6 +19,26 @@ def earnings_dates(symbol):
     except Exception:return None
 
 
+def etf_names():
+    import pandas as pd
+    etfs=pd.read_csv('etfs.csv').fillna('')
+    return dict(zip(etfs.Symbol.astype(str).str.strip().str.upper(),etfs.ETF.astype(str)))
+
+
+def setup_universe(scope):
+    """(symbols, note) for a scan tier: commodities and ETFs first, then the most liquid US stocks."""
+    from crescent_feeds import symbols_from_file
+    data=import_local('liquid_data')
+    stocks=list(symbols_from_file('stocks.csv'))
+    if scope not in data.SETUP_TIERS:return stocks,''
+    note=''
+    try:liquid=data.discover_setup_symbols(data.SETUP_TIERS[scope])
+    except Exception as exc:
+        liquid=stocks
+        note=f'TradingView liquidity ranking unavailable ({type(exc).__name__}); the 574-stock list was used for the stock part of this scan.'
+    return list(dict.fromkeys(list(data.COMMODITIES)+list(etf_names())+liquid)),note
+
+
 def main():
     from datetime import datetime
     from zoneinfo import ZoneInfo
@@ -28,5 +48,5 @@ def main():
     st.markdown(view.CSS,unsafe_allow_html=True)
     st.markdown(view.header(active='setups',source='Yahoo Finance · completed daily candles'),unsafe_allow_html=True)
     liquid=import_local('liquid_app')
-    import_local('setups_view').render_setups_page(liquid.daily_batch,liquid.universe,earnings_dates,
-        datetime.now(ZoneInfo('America/New_York')))
+    import_local('setups_view').render_setups_page(liquid.daily_batch,setup_universe,earnings_dates,
+        datetime.now(ZoneInfo('America/New_York')),etf_names())

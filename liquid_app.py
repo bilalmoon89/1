@@ -34,7 +34,6 @@ def universe(scope):
     from crescent_engine import DEFAULT_WATCH
     stocks=symbols_from_file('stocks.csv')
     if scope=='TradingView US · top 1,500':return import_local('liquid_data').discover_symbols()
-    if scope==import_local('liquid_data').SETUP_SCOPE:return import_local('liquid_data').discover_setup_symbols()
     if scope=='Full 574':return list(stocks)
     return seed_universe(stocks,DEFAULT_WATCH,per_sector=12 if scope=='Balanced 120' else 6,
         limit=120 if scope=='Balanced 120' else 60)

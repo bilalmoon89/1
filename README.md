@@ -73,11 +73,17 @@ Each row shows trigger, stop, risk %, the pullback sequence or gap details, and 
 - BRK.B / BF.B are requested from Yahoo as BRK-B / BF-B. Your own list is always scanned, with a warning for any ticker that could not be.
 - Ticker Check uses the same Wilder ATR as the scanner. Demo-mode leftovers and unused imports were removed, and `use_container_width` was replaced.
 
-## Changes in 7.8.1
+## Scan tiers (7.8.2)
 
-- VCP & PEG page: new universe **US market · price > $10 · $20M/day**. TradingView returns every US primary-listed stock above $10; the app keeps those with at least $20M average daily dollar volume (price × 90-day average volume), most liquid first, capped at 3,000.
-- There is no 200 SMA rule in this universe, so power earnings gaps out of a downtrend are included. Names more than 3% under their 50-day average are skipped before download, because neither setup can match them.
-- A full scan of this universe takes roughly 10–15 minutes on Yahoo. The other universes are unchanged.
+The VCP & PEG page has three scan sizes. Each one scans the commodities and ETFs first, then US stocks ranked by average daily dollar volume (price × 90-day average volume) behind a $10 price and $20M/day floor.
+
+- **Core**: the 500 most liquid US stocks, the ETFs in `etfs.csv`, and 19 commodities.
+- **Medium**: the 1,500 most liquid US stocks, plus the same ETFs and commodities.
+- **Full**: every US primary-listed stock that passes the floor (capped at 4,000), plus the same ETFs and commodities.
+- **Commodities**: gold, silver, copper, platinum, palladium, WTI, Brent, natural gas, gasoline, heating oil, corn, wheat, soybeans, coffee, sugar, cocoa, cotton and live cattle come from Yahoo front-month futures. SHFE hot-rolled coil (`HC1!`) comes from Sina's main-contract series `HC0`, because Yahoo does not carry SHFE. The main contract is the most active month, which is not always the front month.
+- There is no 200 SMA rule, so gaps out of a downtrend are included. Stocks more than 3% under their 50-day average are skipped before download, because neither setup can match them.
+- For ETFs and commodities a PEG row is a power gap; the earnings column reads "Not applicable".
+- If TradingView's liquidity ranking is unavailable, the stock part falls back to the 574-stock list and the page says so. "Stock list · 574" and "My list only" remain.
 
 ## Design (7.8.0)
 

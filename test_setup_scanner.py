@@ -147,6 +147,35 @@ def test_expanded_universe_applies_price_liquidity_and_sma50_floor():
         {'name': 'NEW', 'close': 50.0, 'SMA50': None, 'average_volume_90d_calc': 2_000_000},    # under 50 sessions
         {'name': 'BIG', 'close': 200.0, 'SMA50': 180.0, 'average_volume_90d_calc': 5_000_000},
     ])
-    assert filter_setup_universe(rows) == ['BIG', 'PRICEY', 'TURN', 'MID']
-    assert filter_setup_universe(rows, limit=2) == ['BIG', 'PRICEY']
-    assert filter_setup_universe(pd.DataFrame()) == []
+    assert filter_setup_universe(rows, 4000) == ['BIG', 'PRICEY', 'TURN', 'MID']
+    # The tier size counts the most liquid names first; WEAK takes a slot and is then skipped.
+    assert filter_setup_universe(rows, 3) == ['BIG', 'PRICEY']
+    assert filter_setup_universe(pd.DataFrame(), 500) == []
+
+
+def test_sina_futures_parser_and_asia_session_cutoff():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from liquid_data import parse_sina_daily, complete_asia_daily, COMMODITIES, SINA_FUTURES
+    text = ('/*<script>location.href=\'//sina.com\';</script>*/\nvar _HC0=(['
+            '{"d":"2026-11-13","o":"3300.000","h":"3340.000","l":"3290.000","c":"3320.000","v":"250000","p":"1","s":"3315.000"},'
+            '{"d":"2026-11-16","o":"3320.000","h":"3355.000","l":"3310.000","c":"3350.000","v":"260000","p":"1","s":"3335.000"},'
+            '{"d":"2026-11-17","o":"3350.000","h":"3360.000","l":"3345.000","c":"3352.000","v":"90000","p":"1","s":"3351.000"}]);')
+    f = parse_sina_daily(text)
+    assert list(f.columns) == ['Open', 'High', 'Low', 'Close', 'Volume'] and len(f) == 3
+    assert f.Close.iloc[1] == 3350.0 and str(f.index[-1].date()) == '2026-11-17'
+    et = ZoneInfo('America/New_York')
+    # Monday 10:00 New York: the night session for the 17th is forming, the 16th is complete.
+    assert str(complete_asia_daily(f, datetime(2026, 11, 16, 10, tzinfo=et)).index[-1].date()) == '2026-11-16'
+    assert str(complete_asia_daily(f, datetime(2026, 11, 17, 1, tzinfo=et)).index[-1].date()) == '2026-11-16'
+    assert str(complete_asia_daily(f, datetime(2026, 11, 17, 9, tzinfo=et)).index[-1].date()) == '2026-11-17'
+    assert 'HC1!' in COMMODITIES and SINA_FUTURES['HC1!'] == 'HC0'
+
+
+def test_setup_rows_are_named_for_etfs_and_commodities():
+    from setup_scanner import annotate as _annotate
+    rows = pd.DataFrame([{'Symbol': 'NVDA', 'Setup': 'PEG', 'Earnings': 'Confirmed'},
+                         {'Symbol': 'GC=F', 'Setup': 'PEG', 'Earnings': 'Unverified'}])
+    out = _annotate(rows, {'GC=F': 'Gold'})
+    assert list(out.Name) == ['', 'Gold'] and list(out.Earnings) == ['Confirmed', 'Not applicable']
+    assert 'Name' not in _annotate(rows.iloc[:1], {'GC=F': 'Gold'})

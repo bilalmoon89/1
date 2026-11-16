@@ -306,6 +306,16 @@ def scan(history, spy=None, setups=('VCP', 'PEG'), tight: Tightness = Tightness(
     return out, reasons
 
 
+def annotate(matches, names):
+    """Add names for ETFs / commodities and mark earnings as not applicable for them."""
+    if matches.empty:return matches
+    out=matches.copy()
+    label=out['Symbol'].map(names)
+    if label.notna().any():out.insert(1,'Name',label.fillna(''))
+    if 'Earnings' in out:out.loc[out['Symbol'].isin(names)&out['Earnings'].notna(),'Earnings']='Not applicable'
+    return out
+
+
 def with_overrides(preset, **values):
     """Copy a Tightness preset with user-edited values."""
     return replace(preset, **{k: v for k, v in values.items() if v is not None})
