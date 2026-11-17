@@ -14,8 +14,21 @@ def successful_daily_batch(symbols):
     return frames,failures
 
 
+@st.cache_data(ttl=64800,show_spinner=False)
+def _session_batch(symbols,session):
+    """Kept until the next session closes. Completed daily candles change once per trading
+    day, so a batch that already contains `session` does not need downloading again."""
+    frames,failures=successful_daily_batch(symbols)
+    latest=max((f.index[-1].date() for f in frames.values() if len(f)),default=None)
+    if latest is None or str(latest)<session:raise PartialDaily((frames,failures))
+    return frames,failures
+
+
 def daily_batch(symbols):
-    try:return successful_daily_batch(symbols)
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from session_validity import completed_session
+    try:return _session_batch(symbols,str(completed_session(datetime.now(ZoneInfo('America/New_York')))))
     except PartialDaily as exc:return exc.args[0]
 
 

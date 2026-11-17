@@ -26,31 +26,41 @@ def _setup_labels(history,symbols):
 def render_rotation_page(daily_loader,now):
     st.markdown(CSS,unsafe_allow_html=True)
     st.markdown('<div class="section-heading">Theme Rotation <span>Where money is moving · completed daily candles · equal-weight baskets</span></div>',unsafe_allow_html=True)
-    left,mid,right=st.columns([2,1.2,1],vertical_alignment='bottom')
-    period=left.radio('Period',list(PERIODS),index=2,horizontal=True,key='rot_period')
-    view=mid.radio('View',['Cards','Table'],horizontal=True,key='rot_view')
-    benchmark=right.selectbox('Compare against',BENCHMARKS,key='rot_benchmark')
-    groups=st.multiselect('Market groups',sorted({t['group'] for t in THEMES}),key='rot_groups',placeholder='All groups')
-    selected=[t for t in THEMES if not groups or t['group'] in groups]
-    catalog={t['name']:t for t in selected}
-    with st.expander('How to read this',expanded=False):
+    from datetime import datetime
+    import scan_store
+    from session_validity import completed_session
+    expected=str(completed_session(datetime.now(now.tzinfo)))
+    one,two,three,four=st.columns([2.4,1.2,1,1],vertical_alignment='bottom')
+    period=one.radio('Period',list(PERIODS),index=2,horizontal=True,key='rot_period')
+    view=two.radio('View',['Cards','Table'],horizontal=True,key='rot_view')
+    benchmark=three.selectbox('Compare against',BENCHMARKS,key='rot_benchmark')
+    with st.expander('Market groups · how to read this',expanded=False):
+        groups=st.multiselect('Market groups',sorted({t['group'] for t in THEMES}),key='rot_groups',placeholder='All groups')
         st.caption('Each theme is an equal-weight basket. Return is the average of its members; RS is that return minus the benchmark; rising is the share of members that are up. A theme is ranked only with at least 3 members and 70% of them on the latest session.')
         st.caption('Leading: beating the benchmark over 5 and 10 sessions with most members rising. Heating: beating it over the last 2 sessions, most members rising and the pace picking up. Cooling: ahead over 10 sessions but behind over the last 2, or few members rising. Rank vs 10D shows how many places a theme moved between its 10-session and 2-session rank.')
+    selected=[t for t in THEMES if not groups or t['group'] in groups]
+    catalog={t['name']:t for t in selected}
     symbols=sorted({s for t in selected for s in t['symbols']}|set(SECTOR_PROXIES.values())|set(BENCHMARKS))
-    if st.button('Load rotation',type='primary',width='stretch',key='rot_load'):
-        st.session_state.rotation_job={'symbols':symbols,'done':0,'history':{},'failures':{},'active':True}
-        st.session_state.pop('rotation_result',None)
     job=st.session_state.get('rotation_job')
+    if job is None:
+        # A load finished earlier (in any tab) is reused until the next session closes.
+        saved=scan_store.load('rotation',expected)
+        if saved and set(symbols)<=set(saved['symbols']):st.session_state.rotation_job=job=saved
+    if four.button('Refresh' if job else 'Load rotation',type='primary',width='stretch',key='rot_load'):
+        every=sorted({s for t in THEMES for s in t['symbols']}|set(SECTOR_PROXIES.values())|set(BENCHMARKS))
+        st.session_state.rotation_job=job={'symbols':every,'done':0,'history':{},'failures':{},'active':True}
+        st.session_state.pop('rotation_result',None)
     polling=bool(job and job.get('active'))
-    st.fragment(run_every='2s' if polling else None)(_results)(daily_loader,now,selected,catalog,PERIODS[period],view,benchmark)
+    st.fragment(run_every='2s' if polling else None)(_results)(daily_loader,now,selected,catalog,PERIODS[period],view,benchmark,expected)
 
 
-def _results(daily_loader,now,selected,catalog,horizon,view,benchmark):
+def _results(daily_loader,now,selected,catalog,horizon,view,benchmark,expected=''):
+    import scan_store
     from datetime import datetime
     now=datetime.now(now.tzinfo)
     job=st.session_state.get('rotation_job')
     if not job:
-        st.info(f'{len(selected)} themes ready. Select Load rotation; about 550 price histories load in a minute or two.');return
+        st.info(f'{len(selected)} themes ready. Select Load rotation: about 550 price histories load in a minute or two, once per trading day. After that the page opens with the result already loaded.');return
     if job['active']:
         if st.button('Stop',key='rot_stop'):
             job['active']=False;st.rerun()
@@ -62,7 +72,7 @@ def _results(daily_loader,now,selected,catalog,horizon,view,benchmark):
         job['failures'].update(fail)
         job['done']+=len(batch)
         if job['done']>=len(job['symbols']):
-            job['active']=False;st.rerun()
+            job['active']=False;scan_store.save('rotation',job,expected,now);st.rerun()
         st.progress(job['done']/max(1,len(job['symbols'])),text=f"{job['done']} / {len(job['symbols'])} loaded");return
     history=job['history']
     if benchmark not in history:
@@ -80,7 +90,10 @@ def _results(daily_loader,now,selected,catalog,horizon,view,benchmark):
     ranked=int(themes['Rank eligible'].sum())
     counts=themes[themes['Rank eligible']].State.value_counts()
     summary=' · '.join(f'{name} <b>{int(counts.get(name,0))}</b>' for name in ('Leading','Leading + heating','Heating','Cooling','Lagging','Mixed') if counts.get(name,0))
-    html=f'<div class="rot-status">Session <b>{asof.date()}</b> · <b>{ranked}</b> of {len(themes)} themes ranked · vs <b>{e(benchmark)}</b> · {summary}</div>'
+    loaded=str(job.get('loaded_at',''))[11:16]
+    html=f'<div class="rot-status">Session <b>{asof.date()}</b>'+(f' · loaded {loaded} ET' if loaded else '')+f' · <b>{ranked}</b> of {len(themes)} themes ranked · vs <b>{e(benchmark)}</b> · {summary}</div>'
+    if expected and str(asof.date())<expected:
+        st.warning(f"Yahoo's daily data ends {asof.date()}; the latest completed session is {expected}. These results are one session behind. Select Refresh later to pick up the new candles.")
     ok=stocks[stocks.Data.eq('OK')].set_index('Symbol')
     html+=strip('Sectors',[(name,ok[f'{horizon}D %'].get(symbol)) for name,symbol in SECTOR_PROXIES.items()])
     html+=strip('Groups',group_returns(themes,horizon))

@@ -91,12 +91,22 @@ def render_setups_page(daily_loader,universe_loader,earnings_loader,now,etf_name
         st.session_state.setup_job={'symbols':symbols,'done':0,'history':{},'failures':{},'active':True,'scope':scope,'extras':extras,'note':note}
         st.session_state.pop('setup_earnings',None)
     job=st.session_state.get('setup_job')
+    from datetime import datetime
+    import scan_store
+    from session_validity import completed_session
+    expected=str(completed_session(datetime.now(now.tzinfo)))
+    if scope!='My list only' and (job is None or (not job.get('active') and job.get('scope')!=scope)):
+        # A scan of this tier finished earlier (in any tab) is reused until the next session closes.
+        saved=scan_store.load('setups:'+scope,expected)
+        if saved:
+            st.session_state.setup_job=job=saved;st.session_state.pop('setup_earnings',None)
     polling=bool(job and job.get('active'))
     names=dict(etf_names or {});names.update(COMMODITIES)
-    st.fragment(run_every='2s' if polling else None)(_results)(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules,names)
+    st.fragment(run_every='2s' if polling else None)(_results)(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules,names,expected)
 
 
-def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules,names=None):
+def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules,names=None,expected=''):
+    import scan_store
     names=names or {}
     from datetime import datetime
     now=datetime.now(now.tzinfo)
@@ -115,7 +125,9 @@ def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules,n
         job['failures'].update(fail)
         job['done']+=len(batch)
         if job['done']>=len(job['symbols']):
-            job['active']=False;st.rerun()
+            job['active']=False
+            if expected and job.get('scope')!='My list only':scan_store.save('setups:'+job.get('scope',''),job,expected,now)
+            st.rerun()
         st.progress(job['done']/max(1,len(job['symbols'])),text=f"{job['done']} / {len(job['symbols'])} loaded · {len(job['history'])} usable")
     history=job['history']
     spy=history.get('SPY')
@@ -133,7 +145,8 @@ def _results(daily_loader,earnings_loader,now,setups,tight,vcp_rules,peg_rules,n
         st.session_state.setup_earnings=found
         matches,reasons=scan(history,spy,tuple(setups),tight,vcp_rules,peg_rules,found)
     matches=annotate(matches,names)
-    status='Scanning · partial results' if job['active'] else f"Scan complete · {now.strftime('%H:%M')} ET"
+    done_at=str(job.get('loaded_at',''))[11:16] or now.strftime('%H:%M')
+    status='Scanning · partial results' if job['active'] else f"{job.get('scope','Scan')} · data through {scan_store.data_through(history) or 'n/a'} · loaded {done_at} ET"
     st.markdown(f'<div class="section-heading">Setups <span>{len(matches)} matches · {len(history)} histories · {e(status)}</span></div>',unsafe_allow_html=True)
     if matches.empty:
         st.info('No stock passes every rule in the loaded data. The rules have not been relaxed; try the Loose preset to see near-misses.')

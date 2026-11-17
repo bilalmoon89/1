@@ -4,7 +4,7 @@ import time
 
 LOCAL_MODULES={'terminal_view','liquid_view','liquid_app','liquid_uptrend','liquid_data','liquid_table','session_validity','ticker_check','ticker_check_app','ticker_check_view','ticker_financials',
     'crescent_engine','crescent_feeds','intraday_context','market_symbols','theme_rotation','watchtower',
-    'rotation_app','rotation_view','rotation_cards','rotation_engine','setups_app','setups_view','setup_scanner','sector_map','nyse_fallback'}
+    'scan_store','rotation_app','rotation_view','rotation_cards','rotation_engine','setups_app','setups_view','setup_scanner','sector_map','nyse_fallback'}
 
 
 def import_local(name):

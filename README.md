@@ -73,6 +73,15 @@ Each row shows trigger, stop, risk %, the pullback sequence or gap details, and 
 - BRK.B / BF.B are requested from Yahoo as BRK-B / BF-B. Your own list is always scanned, with a warning for any ticker that could not be.
 - Ticker Check uses the same Wilder ATR as the scanner. Demo-mode leftovers and unused imports were removed, and `use_container_width` was replaced.
 
+## Scans are kept for the trading day (7.10.1)
+
+Completed daily candles change once per trading day, so a finished load no longer has to be repeated.
+
+- **Rotation** and **VCP & PEG** keep their last finished load on the server. Opening the page again, in any tab or after following a header link, shows that result immediately until the next session closes. **Refresh** / **Run setup scan** forces a new load.
+- Price batches that already contain the latest completed session are kept until the next close instead of 20 minutes.
+- If Yahoo has not published the latest session yet, the page says so and the result is kept for 30 minutes only, so a later visit picks up the new candles.
+- The Rotation page is more compact: one control row, two-line theme cards, smaller sector and group pills, eight themes per column.
+
 ## Theme Rotation page (7.10.0)
 
 Open `?view=rotation` from the **Rotation** header link. It brings the theme rotation from the original Crescent scanner into this terminal, with the 100-basket catalog (553 stocks).

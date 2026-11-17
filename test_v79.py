@@ -110,3 +110,12 @@ def test_leadership_label_from_daily_history():
     from setup_scanner import scan_vcp
     row, _ = scan_vcp('TEST', tight_tail(frame_from_path(path)))
     assert 'Leadership' in row and row['Day vol vs 20D %'] < 0
+
+
+def test_completed_session_rolls_over_after_the_close():
+    from session_validity import completed_session
+    assert str(completed_session(datetime(2026, 11, 16, 15, 0, tzinfo=ET))) == '2026-11-13'   # Monday, still open
+    assert str(completed_session(datetime(2026, 11, 16, 16, 10, tzinfo=ET))) == '2026-11-13'  # inside the 15-minute wait
+    assert str(completed_session(datetime(2026, 11, 16, 21, 0, tzinfo=ET))) == '2026-11-16'
+    assert str(completed_session(datetime(2026, 11, 15, 12, 0, tzinfo=ET))) == '2026-11-13'   # Sunday
+    assert str(completed_session(datetime(2026, 11, 17, 8, 0, tzinfo=ET))) == '2026-11-16'    # before the open

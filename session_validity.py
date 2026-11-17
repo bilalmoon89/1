@@ -31,6 +31,14 @@ def session_clock(now):
     return {'date':session.date(),'close':closed,'open':active,'now':now}
 
 
+def completed_session(now):
+    """Date of the latest NYSE session that has finished (close + 15 minutes)."""
+    clock=session_clock(now)
+    if clock['now']<clock['close']+pd.Timedelta(minutes=15):
+        return calendar().previous_session(pd.Timestamp(clock['date'])).date()
+    return clock['date']
+
+
 def market_is_open(now):
     """True only inside today's actual NYSE regular session (holidays and half days aware)."""
     return bool(session_clock(now)['open'])
