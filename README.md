@@ -75,11 +75,11 @@ Each row shows trigger, stop, risk %, the pullback sequence or gap details, and 
 
 ## Market brief (7.11.0)
 
-The Terminal page opens with a market brief under the market strip.
+The Terminal page opens with a market brief, above the market strip.
 
-- **Top headlines** (8): Google News Business and World top stories plus searches for markets, the Fed, trade policy, conflict and energy. The same story from several outlets is merged, then ranked by topic (Fed and rates, macro data, geopolitics, trade and policy, markets, energy, companies), the number of outlets carrying it, its position in Google's top stories, the outlet, and recency. Stories older than 30 hours, stories with no market topic, and listicles ("stocks to buy") are dropped. Refreshed every 10 minutes.
+- **Top headlines** (8): Google News Business and World top stories plus searches for markets, the Fed, trade policy, conflict and energy. The same story from several outlets is merged, then ranked by topic (Fed and rates, macro data, geopolitics, trade and policy, markets, energy, companies), the number of outlets carrying it, its position in Google's top stories, the outlet, and recency. At most two stories per category. Stories older than 30 hours, stories with no market topic, and listicles ("stocks to buy") are dropped. Refreshed every 10 minutes.
 - **Key data**: the most important releases from today through two weeks, one line per release: Fed decision, press conference and minutes, Fed Chair, CPI, jobs report, PCE, GDP, retail sales, PPI, ISM, JOLTS, consumer sentiment, ECB / BoE / BoJ decisions, then jobless claims. Shows forecast and previous, or the actual once released. Source: TradingView's economic calendar, with the Forex Factory weekly export as a fallback. Refreshed hourly.
-- **Earnings**: the 12 largest US companies (market cap above $20B) reporting from today through ten days, with before-open / after-close and the EPS estimate. Source: TradingView screener. Refreshed every six hours.
+- **Earnings**: the 12 largest US companies (market cap above $20B) reporting from today through ten days, with before-open / after-close and the EPS estimate. A company that already reported today stays on the list, marked reported. Source: TradingView screener. Refreshed every two hours.
 - Each source fails on its own; a failure is retried on the next page load rather than cached.
 
 ## Scans are kept for the trading day (7.10.1)

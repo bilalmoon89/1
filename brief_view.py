@@ -18,8 +18,8 @@ def _calendar(hour_key):
     return mb.fetch_calendar()
 
 
-@st.cache_data(ttl=21600, show_spinner=False)
-def _earnings(day_key):
+@st.cache_data(ttl=7200, show_spinner=False)
+def _earnings(bucket):
     return mb.fetch_earnings()
 
 
@@ -39,7 +39,7 @@ def render_market_brief(now):
     except Exception:
         events = []
     try:
-        earnings = mb.top_earnings(_earnings(now.strftime('%Y-%m-%d')), now)
+        earnings = mb.top_earnings(_earnings(f"{now:%Y-%m-%d}-{now.hour // 2}"), now)  # refreshed every 2 hours
     except Exception:
         earnings = []
     notes.append('Headlines via Google News; calendar and earnings dates via TradingView. Dates can change; check before trading around them.')

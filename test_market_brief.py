@@ -115,3 +115,21 @@ def test_brief_html_renders_and_escapes():
     html = brief_html([story], [], [], NOW, 'note')
     assert 'Stocks &lt;slide&gt;' in html and 'a=1&amp;b=2' in html and '3 outlets' in html
     assert 'Key data' in html and 'Earnings' in html and 'unavailable' in html
+
+
+def test_reported_today_stays_on_the_list():
+    reported = (NOW.replace(hour=16, minute=20)).timestamp()
+    next_q = datetime(2027, 2, 25, 21, 20, tzinfo=timezone.utc).timestamp()
+    frame = pd.DataFrame([{'name': 'NVDA', 'description': 'NVIDIA', 'market_cap_basic': 4.6e12,
+                           'earnings_release_date': reported, 'earnings_release_next_date': next_q,
+                           'earnings_per_share_forecast_next_fq': 1.5}])
+    rows = mb.top_earnings(pd.concat([frame, frame]), NOW)
+    assert len(rows) == 1 and rows[0]['reported'] and rows[0]['timing'] == 'After close' and rows[0]['eps'] is None
+    html = brief_html([], [], rows, NOW)
+    assert 'After close · reported' in html
+
+
+def test_category_comes_from_the_shown_headline():
+    assert mb.classify('Oil Futures Rise as Middle East Shipping Risks Persist')[0] == 'Energy'
+    assert mb.classify('Wall Street falters ahead of Nvidia earnings')[0] == 'Markets'
+    assert mb.classify('Nvidia posts Q3 beat; board keeps interim CEO')[0] == 'Companies'

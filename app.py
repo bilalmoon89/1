@@ -663,10 +663,10 @@ def main():
     st.markdown(CSS,unsafe_allow_html=True)
     st.markdown(header(st.session_state.last_refresh),unsafe_allow_html=True)
     snap=st.session_state.market_snapshot
-    render_intraday_context()
     st.markdown('<div class="section-heading">Market brief <span>Top headlines · key economic data · largest earnings</span></div>',unsafe_allow_html=True)
     try:import_local('brief_view').render_market_brief(NOW())
     except Exception as exc:st.caption(f'Market brief unavailable: {type(exc).__name__}')
+    render_intraday_context()
     with st.container(key='scan_toolbar'):
         st.markdown('<div class="toolbar-heading"><b>SCAN CONTROLS</b><span>Same universe · more setups to follow</span></div>',unsafe_allow_html=True)
         controls=st.columns([1.1,.9,1,1.35,.9],vertical_alignment='bottom')

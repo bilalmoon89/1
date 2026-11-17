@@ -35,14 +35,15 @@ FEEDS = (
     ('Energy', f'{GN}/search?q=%22oil+prices%22+OR+OPEC+OR+crude+when:1d{TAIL}', 1.0),
 )
 
-# (category, weight, pattern). A headline needs at least one match to be shown.
+# (category, weight, pattern), most specific first: the first match names the category.
+# A headline needs at least one match to be shown.
 TOPICS = (
     ('Fed & rates', 3.0, r"\b(fed|fomc|federal reserve|fed chair\w*|rate cuts?|rate hikes?|interest rates?|treasur(?:y|ies)|yields?|bond market)\b"),
     ('Macro data', 3.0, r"\b(inflation|cpi|pce|jobs report|payrolls|unemployment|jobless|gdp|recession|retail sales|consumer (?:spending|confidence|sentiment)|ppi|economy|economic growth)\b"),
     ('Geopolitics', 3.0, r"\b(war|missiles?|airstrikes?|attacks?|invasion|ceasefire|troops|military|nuclear|drones?|ukraine|russia|israel|gaza|iran|taiwan|north korea|houthis?|red sea|nato|hezbollah|venezuela)\b"),
     ('Trade & policy', 2.5, r"\b(tariffs?|trade (?:war|deal|talks)|sanctions?|export (?:controls?|curbs|rules|ban)|chip rules|shutdown|debt ceiling|white house|congress|senate|supreme court|antitrust|regulators?|executive order)\b"),
-    ('Markets', 2.0, r"\b(stocks?|stock market|wall street|s&p 500|s&p|dow|nasdaq|sell-?off|rally|record high|bear market|correction|volatility|vix|futures|dollar)\b"),
     ('Energy', 2.0, r"\b(oil|crude|opec\+?|brent|natural gas|gasoline|lng)\b"),
+    ('Markets', 2.0, r"\b(stocks?|stock market|wall street|s&p 500|s&p|dow|nasdaq|sell-?off|rally|record high|bear market|correction|volatility|vix|futures|dollar)\b"),
     ('Companies', 1.5, r"\b(earnings|guidance|revenue|profit|ipo|merger|acquisition|buyout|takeover|layoffs|ceo|nvidia|apple|microsoft|amazon|alphabet|google|meta|tesla|broadcom|openai|anthropic|jpmorgan)\b"),
     ('Crypto', 1.0, r"\b(bitcoin|crypto(?:currency)?|ether(?:eum)?|stablecoins?)\b"),
 )
@@ -52,7 +53,7 @@ TIER1 = ('reuters', 'bloomberg', 'wall street journal', 'wsj', 'financial times'
          'marketwatch', "barron's", 'new york times', 'axios', 'politico', 'bbc', 'the economist', 'fortune',
          'yahoo finance', 'washington post', 'fox business', 'nikkei', 'the guardian')
 LOW = ('motley fool', 'zacks', 'investorplace', '24/7 wall st', 'benzinga', 'seeking alpha', 'gurufocus', 'simply wall st',
-       'tipranks', 'marketbeat', 'insidermonkey', 'insider monkey', 'finbold', 'coincentral', 'federal reserve bank', '.gov')
+       'tipranks', 'marketbeat', 'insidermonkey', 'insider monkey', 'finbold', 'coincentral', 'federal reserve bank', '.gov', 'oilprice')
 STOP = set('the a an and or of to in on for with at by from as is are was were be been it its this that after before over '
            'into about amid says said say new more than up down how why what who will would could can may his her their '
            'they we you our us just not out off amid'.split())
@@ -104,7 +105,7 @@ def classify(title):
     return hits[0][0], min(6.0, sum(w for _, w in hits))
 
 
-def rank_headlines(items, now=None, limit=8, max_age_hours=30, per_category=3):
+def rank_headlines(items, now=None, limit=8, max_age_hours=30, per_category=2):
     """Cluster the same story across feeds and outlets, score it, and return the top stories.
 
     score = (topic + outlets + feed position + source tier) x recency; listicles are dropped,
@@ -127,6 +128,7 @@ def rank_headlines(items, now=None, limit=8, max_age_hours=30, per_category=3):
     for c in clusters:
         lead = max(c['items'], key=lambda i: (_source_tier(i['source']), -i['position']))
         category, topic = classify(' '.join(i['title'] for i in c['items']))
+        category = classify(lead['title'])[0] or category  # the shown headline names the category
         if not topic or NOISE.search(lead['title']):continue  # not market related, or a listicle
         sources = {i['source'] for i in c['items'] if i['source']}
         outlets = max(1, len(sources))
@@ -188,7 +190,7 @@ FAMILIES = (
 )
 FAMILY_RE = [(p, label, re.compile(rx, re.I), country) for p, label, rx, country in FAMILIES]
 # Preferred headline indicator inside a family (first match wins).
-LEAD_RE = re.compile(r'^inflation rate yoy|non ?farm payrolls|core pce price index yoy|gdp growth rate qoq|retail sales mom|^ppi mom|ism manufacturing pmi|ism services pmi', re.I)
+LEAD_RE = re.compile(r'^inflation rate yoy|non ?farm payrolls|^core pce price index yoy|^core pce prices? yoy|^pce price index yoy|^gdp growth rate|^retail sales mom|^ppi mom|ism manufacturing pmi|ism services pmi|fomc minutes|rate decision', re.I)
 CURRENCY_COUNTRY = {'USD': 'US', 'EUR': 'EU', 'GBP': 'GB', 'JPY': 'JP'}
 SKIP_RE = re.compile(r'cleveland|atlanta fed|dallas fed|kansas|richmond|philadelphia fed|chicago fed|ny fed|nahb|auction|redbook|eia|api crude|baker hughes|cftc|speech(?!.*chair)', re.I)
 
@@ -255,7 +257,8 @@ def top_events(rows, now=None, days=14, limit=8):
         g['rows'].append(r);g['when'] = min(g['when'], r['when'])
     out = []
     for g in groups.values():
-        lead = next((r for r in g['rows'] if LEAD_RE.search(r['title'])), g['rows'][0])
+        lead = (next((r for r in g['rows'] if LEAD_RE.search(r['title'])), None)
+                or next((r for r in g['rows'] if r['forecast']), None) or min(g['rows'], key=lambda r: len(r['title'])))
         out.append({'label': g['label'], 'when': g['when'], 'country': g['country'], 'priority': g['priority'],
                     'indicator': lead['title'], 'actual': lead['actual'], 'forecast': lead['forecast'],
                     'previous': lead['previous'], 'released': g['when'] <= now, 'source': lead['source']})
@@ -291,7 +294,7 @@ def fetch_calendar(now=None, days=15, timeout=8):
 
 
 # ---------------------------------------------------------------------- earnings
-EARNINGS_FIELDS = ('name', 'description', 'market_cap_basic', 'earnings_release_next_date',
+EARNINGS_FIELDS = ('name', 'description', 'market_cap_basic', 'earnings_release_next_date', 'earnings_release_date',
                    'earnings_per_share_forecast_next_fq', 'revenue_forecast_next_fq')
 
 
@@ -308,29 +311,42 @@ def release_time(stamp):
 
 
 def top_earnings(frame, now=None, days=10, limit=12):
-    """Largest companies by market cap reporting from today (ET) through `days` ahead."""
+    """Largest companies by market cap reporting from today (ET) through `days` ahead.
+    A company that already reported today (its next date has rolled forward) is kept, marked reported."""
     if frame is None or len(frame) == 0:return []
     now = (now or datetime.now(ET)).astimezone(ET)
     start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     end = start + timedelta(days=days + 1)
-    rows = []
+    rows, seen = [], set()
     for _, r in frame.iterrows():
+        symbol = str(r.get('name', '')).upper()
+        if symbol in seen:continue
+        recent, recent_timing = release_time(r.get('earnings_release_date'))
         when, timing = release_time(r.get('earnings_release_next_date'))
-        if when is None or not (start <= when < end):continue
-        rows.append({'symbol': str(r.get('name', '')).upper(), 'company': str(r.get('description') or ''),
-                     'when': when, 'timing': timing, 'market_cap': r.get('market_cap_basic'),
-                     'eps': r.get('earnings_per_share_forecast_next_fq'), 'revenue': r.get('revenue_forecast_next_fq')})
+        reported = recent is not None and recent.date() == now.date() and recent <= now + timedelta(hours=1)
+        if reported:when, timing = recent, recent_timing
+        elif when is None or not (start <= when < end):continue
+        seen.add(symbol)
+        rows.append({'symbol': symbol, 'company': str(r.get('description') or ''), 'when': when, 'timing': timing,
+                     'reported': reported, 'market_cap': r.get('market_cap_basic'),
+                     'eps': r.get('earnings_per_share_forecast_next_fq') if not reported else None,
+                     'revenue': r.get('revenue_forecast_next_fq')})
     rows = sorted(rows, key=lambda x: -(x['market_cap'] or 0))[:limit]
     return sorted(rows, key=lambda x: (x['when'].date(), x['timing'] != 'Before open', -(x['market_cap'] or 0)))
 
 
 def fetch_earnings(now=None, days=10, min_market_cap=20e9, timeout=12):
-    """Raises on failure so a failed request is not cached."""
+    """Upcoming reports plus reports already out today. Raises on failure so it is not cached."""
     from tradingview_screener import Query, col
     now = now or datetime.now(timezone.utc)
-    lo = int((now - timedelta(days=1)).timestamp()); hi = int((now + timedelta(days=days + 1)).timestamp())
-    _, frame = (Query().set_markets('america').select(*EARNINGS_FIELDS)
-        .where(col('type') == 'stock', col('is_primary') == True, col('market_cap_basic') > min_market_cap,
-               col('earnings_release_next_date').between(lo, hi))
-        .order_by('market_cap_basic', ascending=False).limit(60).get_scanner_data(timeout=timeout))
-    return frame
+    def query(field, lo, hi):
+        _, frame = (Query().set_markets('america').select(*EARNINGS_FIELDS)
+            .where(col('type') == 'stock', col('is_primary') == True, col('market_cap_basic') > min_market_cap,
+                   col(field).between(int(lo.timestamp()), int(hi.timestamp())))
+            .order_by('market_cap_basic', ascending=False).limit(60).get_scanner_data(timeout=timeout))
+        return frame
+    upcoming = query('earnings_release_next_date', now - timedelta(days=1), now + timedelta(days=days + 1))
+    try:today = query('earnings_release_date', now - timedelta(hours=30), now + timedelta(hours=2))
+    except Exception:today = None
+    frames = [f for f in (today, upcoming) if f is not None and len(f)]
+    return pd.concat(frames, ignore_index=True) if frames else upcoming

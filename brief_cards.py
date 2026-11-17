@@ -85,7 +85,8 @@ def earnings_html(earnings, now):
     for r in earnings:
         cls = 'today' if r['when'].date() == now.date() else ''
         eps = f'<small>EPS est</small> {float(r["eps"]):.2f}' if r['eps'] is not None and r['eps'] == r['eps'] else ''
-        rows.append(f'<tr class="{cls}"><td class="d">{escape(_day(r["when"], now))}<br>{escape(r["timing"] or "time n/a")}</td>'
+        timing = (r['timing'] or 'Time TBC') + (' · reported' if r.get('reported') else '')
+        rows.append(f'<tr class="{cls}"><td class="d">{escape(_day(r["when"], now))}<br>{escape(timing)}</td>'
                     f'<td><span class="sym">{escape(r["symbol"])}</span> <small>{escape(r["company"][:28])}</small></td>'
                     f'<td class="n">{_money(r["market_cap"])}<br>{eps}</td></tr>')
     return '<table class="brief-tbl"><tbody>' + ''.join(rows) + '</tbody></table>'
