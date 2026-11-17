@@ -107,3 +107,48 @@ THEMES += [
  theme('Precious metal royalties','Materials','FNV WPM RGLD OR','Royalty and streaming contracts have different capital intensity from operating mines.',METALS,'GOAU'),
  theme('Packaging & forest products','Materials','IP PKG GPK SON CLW LPX WY','Packaging demand, pulp/paper pricing and wood products; housing and consumption cycles.',SECTORS),
 ]
+
+
+# V7.4 additive catalog. The complete pre-update basket list is retained for
+# traceability and backwards comparison. In production use the refined catalog.
+from copy import deepcopy
+ORIGINAL_THEMES = deepcopy(THEMES)
+
+# Split unlike businesses rather than counting a parent and its new child as
+# separate evidence. Unrelated sector/theme intersections remain intentional.
+REPLACEMENTS = {
+    'Managed care & providers': {
+        'name': 'Managed care insurers',
+        'symbols': ['UNH','ELV','CI','CVS','HUM'],
+        'context': 'Managed care and health benefits; excludes hospital operators, which have distinct reimbursement economics.'
+    },
+    'Biotech': {
+        'symbols': ['REGN','GILD','AMGN','ALNY','INSM','SRPT'],
+        'context': 'Biotechnology development and biologics; specialty therapeutics are tracked in a distinct child basket.'
+    },
+    'Nuclear technology': {
+        'symbols': ['BWXT','SMR','OKLO','NNE'],
+        'context': 'Nuclear technology and services excluding fuel enrichment, now a separate research basket.'
+    },
+}
+for _t in THEMES:
+    if _t['name'] in REPLACEMENTS:
+        _t.update(REPLACEMENTS[_t['name']])
+        _t['reviewed']='2026-10-31'
+
+NEW_THEMES = [
+ theme('Pharmaceutical distributors','Healthcare','MCK CAH COR','Drug wholesale distribution and specialty logistics; distinguish from drug manufacturers.',SECTORS),
+ theme('Hospitals & acute care','Healthcare','HCA THC UHS','Hospital operators, payer mix, procedure growth and reimbursement trends.',SECTORS),
+ theme('Contract research organizations','Healthcare','IQV MEDP ICLR CRL','Clinical trial outsourcing and research services; contract cycles differ from biotech drug developers.',SECTORS),
+ theme('Diagnostics & testing','Healthcare','DGX LH EXAS GH','Laboratory diagnostics and specialty testing; mixed reimbursement and technology exposure.',SECTORS),
+ theme('Grocery & specialty food retail','Defensives','KR ACI SFM IMKTA','Grocery operators and fresh-food retailers; lower-discretionary demand, differentiated margins.',SECTORS),
+ theme('Foodservice distribution','Defensives','SYY USFD PFGC','Foodservice distributors; restaurant demand and cost inflation affect returns.',SECTORS),
+ theme('Insurance brokers','Financials','BRO AJG AON MMC','Commercial and specialty insurance brokerage; distinct from insurance underwriting exposure.',SECTORS),
+ theme('LNG exporters & shipping','Power & energy','LNG EE GLNG NEXT','LNG liquefaction, marine shipping and export projects; different project and financing risks.',SECTORS),
+ theme('Specialty therapeutics','Healthcare','VRTX UTHR INCY JAZZ','Commercial specialty therapies; patent, pipeline and regulatory risk.',SECTORS),
+ theme('Nuclear fuel & enrichment','Power & energy','LEU UUUU ASPI','Nuclear enrichment and fuel-cycle exposure; UUUU also operates in uranium and critical minerals.',METALS),
+]
+for _t in NEW_THEMES: _t['reviewed']='2026-10-31'
+THEMES.extend(NEW_THEMES)
+THEME_ALIASES={'Managed care & providers':'Managed care insurers'}
+THEME_CATALOG_VERSION='v7.4'

@@ -34,7 +34,7 @@ def test_original_research_universe_and_themes_preserved():
     a=symbols_from_file('stocks.csv')
     assert len(a)==574
     assert len(pd.read_csv('etfs.csv'))==96
-    assert len(THEMES)==90
+    assert len(THEMES)==100
     assert 'LLY' in a and 'PG' in a and 'NVDA' in a
 
 

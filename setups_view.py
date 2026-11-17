@@ -46,7 +46,7 @@ def _rule_controls():
 LEAD=['Symbol','Name','Close','Trigger','Stop','Risk %']
 SPECIFIC={'VCP':['Pullbacks','Contractions','Pivot','Vs pivot %','Base days','Base vol dry-up'],
           'PEG':['Gap date','Gap %','Gap volume x','Gap-day low','Days since gap','Earnings']}
-TAIL=['EMA','Vs EMA ATR','Tight days','Close spread %','Volume vs 50D','RS 63D vs SPY pp','As of']
+TAIL=['Leadership','EMA','Vs EMA ATR','Tight days','Close spread %','Volume vs 50D','Day vol vs 20D %','RS 63D vs SPY pp','As of']
 
 
 def _display(part):
@@ -56,6 +56,7 @@ def _display(part):
     part=part.dropna(axis=1,how='all')
     order=[c for c in LEAD+SPECIFIC.get(setup,[])+TAIL if c in part.columns]
     part=part[order].copy()
+    if 'Leadership' in part and not part['Leadership'].astype(str).str.len().any():part=part.drop(columns='Leadership')
     if 'Name' in part and not part['Name'].astype(str).str.len().any():part=part.drop(columns='Name')
     for c in ('Contractions','Base days','Days since gap','Tight days'):
         if c in part:part[c]=part[c].astype('Int64')

@@ -73,6 +73,19 @@ Each row shows trigger, stop, risk %, the pullback sequence or gap details, and 
 - BRK.B / BF.B are requested from Yahoo as BRK-B / BF-B. Your own list is always scanned, with a warning for any ticker that could not be.
 - Ticker Check uses the same Wilder ATR as the scanner. Demo-mode leftovers and unused imports were removed, and `use_container_width` was replaced.
 
+## Theme Rotation page (7.10.0)
+
+Open `?view=rotation` from the **Rotation** header link. It brings the theme rotation from the original Crescent scanner into this terminal, with the 100-basket catalog (553 stocks).
+
+- **Period**: today, 2 days, 1 week or 1 month, measured against SPY, QQQ or IWM on completed daily candles.
+- **Three columns**: Leading (sustained strength), Heating (new strength in the last two sessions) and Cooling (leaders losing pace). Each theme has one state, shown the same way on cards, in the table and in the export.
+- **Cards** show the return, relative strength, share of members rising, coverage, how far the theme moved in rank against its 10-session rank, and its three strongest members.
+- **Sector and group strips** show the 11 sector ETFs and the 12 market groups for the chosen period.
+- **Explore a theme** lists its members with a leader score, a review label, and the same `TIGHT · 8 EMA` / `EXTENDED` label used on Liquid Uptrend.
+- A theme is ranked only with at least 3 members and 70% of them on the latest session.
+
+VCP & PEG rows gain two columns taken from the original scanner's ideas: **Leadership** (CORE LEADER / LEADER / EMERGING from 1W, 1M, 3M and 6M momentum, computed from daily history) and **Day vol vs 20D %** (latest session volume against the prior 20 sessions).
+
 ## Ticker Check and Liquid Uptrend (7.9.0)
 
 **Ticker Check** is one screen: name and price, the verdict, a gate checklist, key numbers, then trade plan, trend, fundamentals and valuation, with the daily candlestick chart below.

@@ -15,6 +15,10 @@ if st.query_params.get('view')=='liquid':
     import_local('liquid_app').main()
     st.stop()
 
+if st.query_params.get('view')=='rotation':
+    import_local('rotation_app').main()
+    st.stop()
+
 if st.query_params.get('view')=='setups':
     import_local('setups_app').main()
     st.stop()

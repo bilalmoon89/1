@@ -259,6 +259,26 @@ def scan_peg(symbol, raw, spy=None, tight: Tightness = Tightness(), rules: PEGRu
     return row, 'PEG'
 
 
+def leadership(f):
+    """Momentum leadership from the original scanner's Weekly Leaders, computed from daily history.
+
+    A timeframe counts when the return clears its bar (1W 20%, 1M 30%, 3M 70%, 6M 100%)
+    while price is at least 50% above the 52-week low and holds above a 10-day average
+    that is within 20% of it. Three or more timeframes = CORE LEADER, two = LEADER, one
+    with a 3M gain over 30% or a 6M gain over 50% = EMERGING.
+    """
+    c = f.Close
+    if len(c) < 130: return ''
+    last = float(c.iloc[-1]); sma10 = float(c.tail(10).mean())
+    if last < float(f.Low.tail(252).min()) * 1.5 or not (last * 0.80 <= sma10 <= last): return ''
+    gain = {n: (last / float(c.iloc[-n - 1]) - 1) * 100 for n in (5, 21, 63, 126)}
+    hits = sum(gain[n] > bar for n, bar in ((5, 20), (21, 30), (63, 70), (126, 100)))
+    if hits >= 3: return 'CORE LEADER'
+    if hits == 2: return 'LEADER'
+    if hits == 1 and (gain[63] > 30 or gain[126] > 50): return 'EMERGING'
+    return ''
+
+
 def _row(symbol, setup, f, spy, t, trigger, stop):
     last = float(f.Close.iloc[-1])
     rs = None
@@ -274,6 +294,9 @@ def _row(symbol, setup, f, spy, t, trigger, stop):
         'Tight days': t['small_days'], 'Close spread %': round(t['close_spread_pct'], 2),
         'EMA': f"{t['ema_span']} EMA", 'Vs EMA ATR': round(t['ema_dist_atr'], 2),
         'Volume vs 50D': round(t['volume_ratio'], 2), 'RS 63D vs SPY pp': round(rs, 1) if rs is not None else None,
+        'Leadership': leadership(f),
+        'Day vol vs 20D %': round((float(f.Volume.iloc[-1]) / float(f.Volume.iloc[-21:-1].mean()) - 1) * 100, 1)
+            if len(f) > 21 and float(f.Volume.iloc[-21:-1].mean()) > 0 else None,
         'As of': str(f.index[-1].date()),
     }
 

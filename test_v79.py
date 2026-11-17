@@ -68,3 +68,45 @@ def test_liquid_rank_distance_from_high_and_tight_label():
     # Too few histories for a meaningful percentile: no rank, sorted by liquidity as before.
     small, _ = screen_history({k: history[k] for k in list(history)[:3]}, LiquidFilters(adr1=0, adr20=0))
     assert small['RS rank'].isna().all() and 'RS rank' not in leaders_frame(small)
+
+
+def _walk(drift, n=260, seed=0, last=0.0):
+    rng = np.random.default_rng(seed)
+    steps = np.full(n, drift) + rng.normal(0, 0.002, n); steps[-2:] += last
+    c = 50 * np.exp(np.cumsum(steps))
+    return pd.DataFrame({'Open': c, 'High': c * 1.01, 'Low': c * 0.99, 'Close': c, 'Volume': 3e6},
+                        index=pd.bdate_range(end='2026-11-13', periods=n))
+
+
+def test_rotation_states_cards_and_tables():
+    from rotation_engine import stock_metrics, theme_metrics, leader_table
+    from rotation_cards import theme_panels, theme_table, group_returns, strip, leaders_view
+    themes = [{'name': 'Strong', 'group': 'G1', 'symbols': ['A1', 'A2', 'A3'], 'proxy': ''},
+              {'name': 'Fading', 'group': 'G2', 'symbols': ['B1', 'B2', 'B3'], 'proxy': ''},
+              {'name': 'Thin', 'group': 'G2', 'symbols': ['C1', 'C2', 'C3', 'C4'], 'proxy': ''}]
+    history = {'SPY': _walk(0.0004)}
+    history.update({s: _walk(0.004, seed=i + 1, last=0.01) for i, s in enumerate(['A1', 'A2', 'A3'])})
+    history.update({s: _walk(0.005, seed=i + 9, last=-0.012) for i, s in enumerate(['B1', 'B2', 'B3'])})
+    history['C1'] = _walk(0.001, seed=20)          # 1 of 4 members: below the coverage rule
+    stocks, asof = stock_metrics(history, 'SPY')
+    table = theme_metrics(stocks, themes).set_index('Theme')
+    assert str(asof.date()) == '2026-11-13'
+    assert table.loc['Strong', 'State'] in ('Leading', 'Leading + heating')
+    assert table.loc['Fading', 'State'] == 'Cooling' and table.loc['Thin', 'State'] == 'Low coverage'
+    html = theme_panels(table.reset_index(), stocks, {t['name']: t for t in themes}, 5)
+    assert 'Strong' in html and 'Fading' in html and 'Thin' not in html and html.count('rot-card"') == 2
+    ranking = theme_table(table.reset_index(), 5)
+    assert ranking.Theme.iloc[0] == 'Strong' and ranking.Theme.iloc[-1] == 'Thin'
+    assert dict(group_returns(table.reset_index(), 5))['G1'] > 0 and 'rot-pill' in strip('Groups', [('G1', 1.2)])
+    assert leaders_view(leader_table(stocks, ['A1', 'A2', 'A3'])).columns[0] == 'Symbol'
+
+
+def test_leadership_label_from_daily_history():
+    from setup_scanner import leadership
+    assert leadership(_walk(0.014)) == 'CORE LEADER'    # clears the 1M, 3M and 6M bars
+    assert leadership(_walk(0.008)) == 'EMERGING'       # only the 6M bar
+    assert leadership(_walk(0.0002)) == '' and leadership(_walk(0.014, n=100)) == ''
+    path, _ = vcp_path((25, 12, 5))
+    from setup_scanner import scan_vcp
+    row, _ = scan_vcp('TEST', tight_tail(frame_from_path(path)))
+    assert 'Leadership' in row and row['Day vol vs 20D %'] < 0

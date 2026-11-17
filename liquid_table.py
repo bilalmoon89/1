@@ -54,11 +54,13 @@ def leaders_table(frame):
             elif column=='Off 52W high':body=f'{number:.1f}%' if math.isfinite(number) else '—'
             elif column=='Setup':
                 color='#45D6A0' if 'TIGHT' in str(value) else '#E3C77E';body=escape(str(value)) if str(value) not in ('','nan','None') else ''
+            elif column.endswith(' pp') and math.isfinite(number):
+                color='#55e1a5' if number>=0 else '#ff7b87';body=f'{number:+.2f}'
             elif '%' in column and math.isfinite(number):
                 color='#55e1a5' if number>=0 else '#ff7b87'
                 background='#102c26' if number>=0 else '#351d29'
                 body=f'{number:+.2f}%'
-            elif column in ('Session volume','Avg volume 20D','Avg $ volume 50D') and math.isfinite(number):
+            elif (column=='Session volume' or column.startswith(('Avg volume','Avg $ volume'))) and math.isfinite(number):
                 color='#77cafa';body=('$' if '$' in column else '')+f'{number/1e6:,.2f}M'
             elif column=='RVOL' and math.isfinite(number):
                 color='#d7acff' if number>=1 else '#8f9eaf';body=f'{number:.2f}×'
