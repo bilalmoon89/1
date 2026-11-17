@@ -41,7 +41,7 @@ TOPICS = (
     ('Fed & rates', 3.0, r"\b(fed|fomc|federal reserve|fed chair\w*|rate cuts?|rate hikes?|interest rates?|treasur(?:y|ies)|yields?|bond market)\b"),
     ('Macro data', 3.0, r"\b(inflation|cpi|pce|jobs report|payrolls|unemployment|jobless|gdp|recession|retail sales|consumer (?:spending|confidence|sentiment)|ppi|economy|economic growth)\b"),
     ('Geopolitics', 3.0, r"\b(war|missiles?|airstrikes?|attacks?|invasion|ceasefire|troops|military|nuclear|drones?|ukraine|russia|israel|gaza|iran|taiwan|north korea|houthis?|red sea|nato|hezbollah|venezuela)\b"),
-    ('Trade & policy', 2.5, r"\b(tariffs?|trade (?:war|deal|talks)|sanctions?|export (?:controls?|curbs|rules|ban)|chip rules|shutdown|debt ceiling|white house|congress|senate|supreme court|antitrust|regulators?|executive order)\b"),
+    ('Trade & policy', 2.5, r"\b(tariffs?|trade (?:war|deal|talks)|(?:u\.?s\.?|eu|china|chinese|russia|russian|iran|iranian|venezuela|oil|chip) sanctions?|sanctions? (?:on|against) (?:russia|china|iran|venezuela|oil)|export (?:controls?|curbs|rules|ban)|chip rules|shutdown|debt ceiling|white house|congress|senate|supreme court|antitrust|regulators?|executive order)\b"),
     ('Energy', 2.0, r"\b(oil|crude|opec\+?|brent|natural gas|gasoline|lng)\b"),
     ('Markets', 2.0, r"\b(stocks?|stock market|wall street|s&p 500|s&p|dow|nasdaq|sell-?off|rally|record high|bear market|correction|volatility|vix|futures|dollar)\b"),
     ('Companies', 1.5, r"\b(earnings|guidance|revenue|profit|ipo|merger|acquisition|buyout|takeover|layoffs|ceo|nvidia|apple|microsoft|amazon|alphabet|google|meta|tesla|broadcom|openai|anthropic|jpmorgan)\b"),

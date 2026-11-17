@@ -133,3 +133,9 @@ def test_category_comes_from_the_shown_headline():
     assert mb.classify('Oil Futures Rise as Middle East Shipping Risks Persist')[0] == 'Energy'
     assert mb.classify('Wall Street falters ahead of Nvidia earnings')[0] == 'Markets'
     assert mb.classify('Nvidia posts Q3 beat; board keeps interim CEO')[0] == 'Companies'
+
+
+def test_sanctions_count_only_when_they_touch_big_economies_or_oil():
+    assert mb.classify('Ed Miliband announces first sanctions on Israeli firms working in West Bank') == ('', 0.0)
+    assert mb.classify('US weighs new sanctions on Russia oil exports')[0] in ('Trade & policy', 'Geopolitics')
+    assert mb.classify('Treasury unveils Iran sanctions targeting tankers')[0] == 'Trade & policy'

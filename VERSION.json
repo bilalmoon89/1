@@ -4,7 +4,7 @@
   "build_date": "2026-11-16",
   "deployment": "standalone-new-streamlit-app",
   "writes_to_existing_scanner": false,
-  "offline_tests_passed": "105 of 107 non-UI tests (Python 3.13, pandas 3); 2 need yfinance/streamlit and test_terminal_ui.py was not run in the build environment",
+  "offline_tests_passed": "108 of 110 non-UI tests (Python 3.13, pandas 3); 2 need yfinance/streamlit and test_terminal_ui.py was not run in the build environment",
   "terminal_interaction_tested": false,
   "live_streamlit_runtime_tested": false,
   "market_data_tested_on_new_deployment": false,
