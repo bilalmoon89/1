@@ -41,6 +41,8 @@ from rotation_themes import THEMES
 st.set_page_config(page_title='Crescent Trade Terminal — BETA',page_icon='🌙',
                    layout='wide',initial_sidebar_state='collapsed')
 NOW=lambda:datetime.now(ET)
+# Streamlit renders text between two dollar signs as a formula, so escape them in Markdown text.
+md_money=lambda v:money(v).replace('$','\\$')
 
 
 class PartialDownload(Exception):
@@ -336,7 +338,7 @@ def live_result(plan):
             c2.metric('RTH VWAP',money(result.get('vwap')))
             c3.metric('Remaining R:R',str(result.get('remaining_rr','—')))
             if result.get('sector_price') is not None:
-                st.caption(f"Sector confirmation: {money(result['sector_price'])} vs session VWAP {money(result.get('sector_vwap'))}. SPY context: {result.get('market_agrees','unknown')} (diagnostic only).")
+                st.caption(f"Sector confirmation: {md_money(result['sector_price'])} vs session VWAP {md_money(result.get('sector_vwap'))}. SPY context: {result.get('market_agrees','unknown')} (diagnostic only).")
         if result.get('bar_time'):st.caption('Completed bar start: '+result['bar_time']+' • Provider may be delayed.')
     if event_block:st.error('Macro/event restriction active. Revalidate plan after the event.')
 
@@ -347,12 +349,12 @@ def manual_manage(plan):
     if position:
         st.markdown(f'#### MANAGE — {symbol} (manual record)')
         st.warning('This is not connected to your broker. Price, fills, stop execution and account exposure are NOT verified.')
-        st.markdown(f"**Frozen thesis:** {plan['setup']} · {plan['direction']} · stop reference {money(plan['stop'])} · next obstacle {money(plan['target'])}.")
+        st.markdown(f"**Frozen thesis:** {plan['setup']} · {plan['direction']} · stop reference {md_money(plan['stop'])} · next obstacle {md_money(plan['target'])}.")
         st.info('Decision: Is the original thesis still valid? Use the planned SWING structure, not a random intraday EMA dip.')
         daily=st.session_state.market_snapshot['frames'].get(symbol)
         daily_m=snapshot(daily) if daily is not None else None
         if daily_m:
-            st.caption(f"Last completed daily close {money(daily_m['price'])} · 21 EMA {money(daily_m['ema21'])} · as of {daily_m['asof']}. Daily trend context, not a stop execution feed.")
+            st.caption(f"Last completed daily close {md_money(daily_m['price'])} · 21 EMA {md_money(daily_m['ema21'])} · as of {daily_m['asof']}. Daily trend context, not a stop execution feed.")
         if st.button('Check underlying against frozen stop / target',key='manage_quote_'+pid):
             try:
                 quote=cached_intraday(symbol)
@@ -368,7 +370,7 @@ def manual_manage(plan):
                     if sign*(q-plan['stop'])<=0:
                         st.error(f'Underlying {money(q)} beyond planned stop reference {money(plan["stop"])}. This does NOT mean any broker stop executed.')
                     elif plan['target'] is not None and sign*(q-plan['target'])>=0:
-                        st.info(f'Underlying {money(q)} reached the planned obstacle {money(plan["target"])}. Follow your predefined management plan.')
+                        st.info(f'Underlying {md_money(q)} reached the planned obstacle {md_money(plan["target"])}. Follow your predefined management plan.')
                     else:
                         st.info(f'Underlying {money(q)} has not breached the stop reference. Reassess price structure and earnings; this alone does not prove the thesis is intact.')
                     st.caption('Quote bar time '+str(qt)+' · Yahoo may be delayed.')

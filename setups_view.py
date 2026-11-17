@@ -74,7 +74,7 @@ def render_setups_page(daily_loader,universe_loader,earnings_loader,now,etf_name
     if scope in SETUP_TIERS:
         count={500:'the 500 most liquid',1500:'the 1,500 most liquid'}.get(SETUP_TIERS[scope],'all')
         timing={500:'about 3–4 minutes',1500:'about 7–10 minutes'}.get(SETUP_TIERS[scope],'10–15 minutes or more')
-        st.caption(f'Scans {len(COMMODITIES)} commodities (Yahoo front-month futures, plus SHFE hot-rolled coil HC1! from Sina), the {len(etf_names or {})} ETFs in etfs.csv, and {count} US stocks above $10 with at least $20M average daily dollar volume. Stocks more than 3% under their 50-day average are skipped, since neither setup can match them. Expect {timing} on Yahoo; commodities and ETFs load first. For ETFs and commodities a PEG row is a power gap, not an earnings gap.')
+        st.caption(f'Scans {len(COMMODITIES)} commodities (Yahoo front-month futures, plus SHFE hot-rolled coil HC1! from Sina), the {len(etf_names or {})} ETFs in etfs.csv, and {count} US stocks above \\$10 with at least \\$20M average daily dollar volume. Stocks more than 3% under their 50-day average are skipped, since neither setup can match them. Expect {timing} on Yahoo; commodities and ETFs load first. For ETFs and commodities a PEG row is a power gap, not an earnings gap.')
     custom=st.text_input('My list / additional tickers',placeholder='e.g. NVDA, COHR, ANF',key='su_extra')
     tight=_tightness_controls(preset)
     vcp_rules,peg_rules=_rule_controls()
