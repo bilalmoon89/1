@@ -38,7 +38,7 @@ FEEDS = (
 # (category, weight, pattern), most specific first: the first match names the category.
 # A headline needs at least one match to be shown.
 TOPICS = (
-    ('Fed & rates', 3.0, r"\b(fed|fomc|federal reserve|fed chair\w*|rate cuts?|rate hikes?|interest rates?|treasur(?:y|ies)|yields?|bond market)\b"),
+    ('Fed & rates', 3.0, r"\b(fed|fomc|federal reserve|fed chair\w*|rate cuts?|rate hikes?|interest rates?|treasuries|treasury (?:yields?|bonds?|notes?|bills?|market|auction)|yields?|bond market)\b"),
     ('Macro data', 3.0, r"\b(inflation|cpi|pce|jobs report|payrolls|unemployment|jobless|gdp|recession|retail sales|consumer (?:spending|confidence|sentiment)|ppi|economy|economic growth)\b"),
     ('Geopolitics', 3.0, r"\b(war|missiles?|airstrikes?|attacks?|invasion|ceasefire|troops|military|nuclear|drones?|ukraine|russia|israel|gaza|iran|taiwan|north korea|houthis?|red sea|nato|hezbollah|venezuela)\b"),
     ('Trade & policy', 2.5, r"\b(tariffs?|trade (?:war|deal|talks)|(?:u\.?s\.?|eu|china|chinese|russia|russian|iran|iranian|venezuela|oil|chip) sanctions?|sanctions? (?:on|against) (?:russia|china|iran|venezuela|oil)|export (?:controls?|curbs|rules|ban)|chip rules|shutdown|debt ceiling|white house|congress|senate|supreme court|antitrust|regulators?|executive order)\b"),
