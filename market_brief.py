@@ -127,9 +127,10 @@ def rank_headlines(items, now=None, limit=8, max_age_hours=30, per_category=2):
     stories = []
     for c in clusters:
         lead = max(c['items'], key=lambda i: (_source_tier(i['source']), -i['position']))
-        category, topic = classify(' '.join(i['title'] for i in c['items']))
-        category = classify(lead['title'])[0] or category  # the shown headline names the category
-        if not topic or NOISE.search(lead['title']):continue  # not market related, or a listicle
+        # The headline that is shown must itself be market related; other outlets' wording only adds weight.
+        category, own = classify(lead['title'])
+        if not own or NOISE.search(lead['title']):continue  # not market related, or a listicle
+        topic = max(own, classify(' '.join(i['title'] for i in c['items']))[1])
         sources = {i['source'] for i in c['items'] if i['source']}
         outlets = max(1, len(sources))
         broad = 0.5 if max(i['related'] for i in c['items']) >= 3 else 0.0  # Google lists related coverage

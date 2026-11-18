@@ -151,3 +151,10 @@ def test_collapsed_summary_line():
     line = brief_summary([{}] * 8, events, earnings, NOW)
     assert line == 'Market brief · Next data: Jobless claims Thu 19 Nov 08:30 · Earnings tomorrow: LOW, PANW · 8 headlines'
     assert brief_summary([], [], [], NOW) == 'Market brief · headlines unavailable'
+
+
+def test_shown_headline_must_be_market_related():
+    items = mb.parse_rss(rss([('UK sanctions firms over Israeli West Bank settlements', 'BBC', 1)]), 'World', 2.0) + \
+            mb.parse_rss(rss([('UK sanctions firms over West Bank settlements as Israel war widens', 'Reuters', 1)]), 'Conflict', 1.0)
+    picked = mb.rank_headlines(items, NOW.astimezone(timezone.utc))
+    assert all('Israel war' in s['title'] for s in picked)    # only a version that names a market topic can be shown
