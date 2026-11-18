@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 import streamlit as st
 import market_brief as mb
-from brief_cards import brief_html
+from brief_cards import brief_html, brief_summary
 
 
 # ------------------------------------------------------------------ cached data
@@ -43,4 +43,6 @@ def render_market_brief(now):
     except Exception:
         earnings = []
     notes.append('Headlines via Google News; calendar and earnings dates via TradingView. Dates can change; check before trading around them.')
-    st.markdown(brief_html(stories, events, earnings, now, ' '.join(notes)), unsafe_allow_html=True)
+    # Collapsed by default so the market strip stays at the top of the page.
+    with st.expander(brief_summary(stories, events, earnings, now), expanded=False):
+        st.markdown(brief_html(stories, events, earnings, now, ' '.join(notes)), unsafe_allow_html=True)

@@ -140,3 +140,14 @@ def test_sanctions_count_only_when_they_touch_big_economies_or_oil():
     assert mb.classify('US weighs new sanctions on Russia oil exports')[0] in ('Trade & policy', 'Geopolitics')
     assert mb.classify('Treasury unveils Iran sanctions targeting tankers')[0] in ('Trade & policy', 'Geopolitics')
     assert mb.classify('Treasury Secretary meets bank CEOs')[0] != 'Fed & rates'
+
+
+def test_collapsed_summary_line():
+    from brief_cards import brief_summary
+    d = lambda days, h, m=0: (NOW + timedelta(days=days)).replace(hour=h, minute=m)
+    events = [dict(label='Retail sales', when=d(0, 8, 30), released=True),
+              dict(label='Jobless claims', when=d(2, 8, 30), released=False)]
+    earnings = [dict(symbol='LOW', when=d(1, 7)), dict(symbol='PANW', when=d(1, 16, 5)), dict(symbol='WMT', when=d(2, 7))]
+    line = brief_summary([{}] * 8, events, earnings, NOW)
+    assert line == 'Market brief · Next data: Jobless claims Thu 19 Nov 08:30 · Earnings tomorrow: LOW, PANW · 8 headlines'
+    assert brief_summary([], [], [], NOW) == 'Market brief · headlines unavailable'

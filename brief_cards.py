@@ -2,7 +2,7 @@
 from html import escape
 
 CSS = '''<style>
-.brief{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:12px;margin:4px 0 12px}
+.brief{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:12px;margin:0 0 8px}
 .brief-col{border:1px solid #253244;border-radius:6px;background:#0E1622;min-width:0}
 .brief-col h4{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0!important;padding:8px 11px!important;border-bottom:1px solid #253244;
   font:600 11.5px var(--sans,sans-serif)!important;letter-spacing:.08em;text-transform:uppercase;color:#D4A840!important}
@@ -98,3 +98,20 @@ def brief_html(stories, events, earnings, now, notes=''):
              f'<div class="brief-col"><h4>Earnings<small>Largest reporting · next 10 days</small></h4>{earnings_html(earnings, now)}</div></div>')
     foot = f'<div class="brief-foot">{escape(notes)}</div>' if notes else ''
     return CSS + '<div class="brief">' + left + right + '</div>' + foot
+
+
+def brief_summary(stories, events, earnings, now):
+    """One line for the collapsed brief: next key release, next reporters, headline count."""
+    parts = []
+    upcoming = [e for e in events if not e['released']]
+    if upcoming:
+        e = upcoming[0]
+        time = '' if e['when'].hour == 0 and e['when'].minute == 0 else ' ' + e['when'].strftime('%H:%M')
+        parts.append(f"Next data: {e['label']} {_day(e['when'], now)}{time}")
+    if earnings:
+        day = min(r['when'].date() for r in earnings)
+        names = [r['symbol'] for r in earnings if r['when'].date() == day][:3]
+        when = next(r['when'] for r in earnings if r['when'].date() == day)
+        parts.append(f"Earnings {_day(when, now).lower() if _day(when, now) in ('Today', 'Tomorrow') else _day(when, now)}: {', '.join(names)}")
+    parts.append(f'{len(stories)} headlines' if stories else 'headlines unavailable')
+    return 'Market brief · ' + ' · '.join(parts)
