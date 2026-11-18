@@ -4,6 +4,44 @@ Research/paper-planning only; no broker connection, no automatic trading.
 """
 from __future__ import annotations
 import streamlit as st
+
+
+@st.cache_resource(show_spinner=False)
+def _module_stamps():
+    """Per-process record of local module file times; created empty on the first run of a process."""
+    return {}
+
+
+def _reload_changed_local_modules():
+    """A hosted git update can replace files while keeping the old modules in memory.
+    Reload every app module whose file changed since it was recorded (all of them once
+    per process the first time this runs), retrying so a module is reloaded after the
+    local modules it imports."""
+    import importlib, os, sys
+    from pathlib import Path
+    here = Path(__file__).resolve().parent
+    stamps = _module_stamps()
+    first = not stamps
+    pending = []
+    for name, module in list(sys.modules.items()):
+        path = getattr(module, '__file__', None)
+        if not path or name == '__main__' or Path(path).resolve().parent != here:continue
+        try:mtime = os.path.getmtime(path)
+        except OSError:continue
+        if first or stamps.get(name) != mtime:pending.append(name)
+        stamps[name] = mtime
+    for _ in range(len(pending) + 1):
+        if not pending:break
+        retry = []
+        for name in pending:
+            try:importlib.reload(sys.modules[name])
+            except Exception:retry.append(name)
+        if len(retry) == len(pending):break
+        pending = retry
+    stamps['__reloaded__'] = True
+
+
+_reload_changed_local_modules()
 from startup_imports import import_local
 
 if st.query_params.get('view')=='ticker':
