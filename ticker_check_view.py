@@ -13,9 +13,9 @@ CSS='''<style>
 
 
 CSS+='''<style>
-.tc-top{display:grid;grid-template-columns:minmax(0,.75fr) minmax(210px,260px) minmax(0,1.25fr);align-items:center;gap:16px;margin:2px 0 10px}
+.tc-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,260px) minmax(0,.35fr);align-items:center;gap:20px;margin:2px 0 10px}
 .tc-islamic{background:#101925;border:1px solid #2C3A4C;border-top:2px solid #75859A;border-radius:6px;padding:8px 12px;text-align:center;min-width:0}.tc-islamic>*{display:block}.tc-islamic>small{font-size:10px;color:#A9B6C6;line-height:1.5}.tc-islamic>b{font-size:16px;margin:3px 0;color:#C9D3DF}.tc-islamic>span,.tc-islamic>a{font-size:11px;line-height:1.5;color:#A9B6C6}.tc-islamic.pass{border-top-color:#45D6A0}.tc-islamic.pass>b{color:#45D6A0}.tc-islamic.warn{border-top-color:#D4A840}.tc-islamic.warn>b{color:#D4A840}.tc-islamic.fail{border-top-color:#F47F8E}.tc-islamic.fail>b{color:#F47F8E}
-.tc-id b{font:600 30px/1 var(--serif,Georgia,serif);color:#F0EDE6;letter-spacing:.01em}
+.tc-identity-row{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 18px}.tc-id .tc-symbol{font:700 30px/1.2 var(--sans,Arial,sans-serif);color:#F0EDE6;letter-spacing:.025em}.tc-inline-price{font:600 26px/1.2 var(--mono,monospace);color:#F0EDE6;font-variant-numeric:tabular-nums}.tc-day-change{font:600 14px/1.4 var(--mono,monospace);color:#C9D3DF}.tc-day-change.up{color:#45D6A0}.tc-day-change.down{color:#F47F8E}
 .tc-id span{display:block;margin-top:5px;font-size:13px;color:#C9D3DF}.tc-id small{display:block;margin-top:2px;font-size:11.5px;color:#A9B6C6}
 .tc-price{text-align:right}.tc-price b{display:block;font:600 26px/1 var(--mono,monospace);color:#F0EDE6;font-variant-numeric:tabular-nums}
 .tc-price small{display:block;margin-top:5px;font-size:11.5px;color:#A9B6C6}
@@ -33,7 +33,7 @@ CSS+='''<style>
 .tc-kpi span{display:block;margin-top:2px;font-size:11px;color:#A9B6C6}.tc-kpi.up b{color:#45D6A0}.tc-kpi.down b{color:#F47F8E}.tc-kpi.warn b{color:#E3C77E}
 .tc-values b{font-size:18px}
 .tc-plan-entry b{color:#D4A840}.tc-plan-stop b{color:#F47F8E}.tc-plan-target b{color:#45D6A0}
-@media(max-width:680px){.tc-top{grid-template-columns:1fr 1fr;gap:8px}.tc-id{grid-column:1;grid-row:1}.tc-price{grid-column:2;grid-row:1;text-align:right}.tc-islamic{grid-column:1/-1;grid-row:2;min-width:0;text-align:left;padding:10px 12px}.tc-islamic>small,.tc-islamic>span{font-size:12px;line-height:1.55}.tc-islamic>b{font-size:18px}.tc-verdict{grid-template-columns:1fr}.tc-verdict b{white-space:normal}.tc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.tc-top{grid-template-columns:1fr;gap:10px}.tc-id{grid-column:1;grid-row:1}.tc-identity-row{gap:5px 12px}.tc-id .tc-symbol{font-size:26px}.tc-inline-price{font-size:24px}.tc-islamic{grid-column:1;grid-row:2;min-width:0;text-align:left;padding:10px 12px}.tc-islamic>small,.tc-islamic>span{font-size:12px;line-height:1.55}.tc-islamic>b{font-size:18px}.tc-verdict{grid-template-columns:1fr}.tc-verdict b{white-space:normal}.tc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>'''
 
 def tag(text):
@@ -73,6 +73,22 @@ def signed_tone(value):
     return '' if n is None else 'up' if n>=0 else 'down'
 
 
+def day_change(quote, tech):
+    """Use the validated quote's own session change; otherwise the completed daily pair."""
+    if quote.get('valid'):
+        pct = number(quote.get('day_change_pct'))
+        price = number(quote.get('price'))
+        if pct is None or pct <= -100 or price is None:
+            return None, None, 'Day change unavailable'
+        return price - price / (1 + pct / 100), pct, 'Today'
+    frame = tech.get('frame')
+    if frame is not None and len(frame) >= 2:
+        previous = number(frame.Close.iloc[-2]); latest = number(frame.Close.iloc[-1])
+        if previous is not None and previous > 0 and latest is not None:
+            return latest-previous, (latest/previous-1)*100, 'Last session'
+    return None, None, 'Day change unavailable'
+
+
 def dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations,r40=None,extra=None):
     """One screen: identity and price, verdict, gate checklist, key numbers, then plan / trend / fundamentals / valuation."""
     r40=r40 or {'score':None,'status':'UNAVAILABLE','period':''}
@@ -86,8 +102,12 @@ def dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations,r40
     else:
         price=f'{tech["price"]:,.2f}' if number(tech.get('price')) is not None else '—'
         price_note=f'Daily close {tech.get("asof","unavailable")} · live quote {str(quote.get("status","unavailable")).split(" · ")[0].lower()}'
-    head=(f'<div class="tc-top"><div class="tc-id"><b>{e(symbol)}</b><span>{e(name)}</span>'+(f'<small>{e(sector)}</small>' if sector else '')
-        +'</div>'+compliance_box(symbol)+f'<div class="tc-price"><b>{e(price)}</b><small>{e(price_note)}</small></div></div>')
+    change,change_pct,change_label=day_change(quote,tech)
+    movement=(f'{change:+,.2f} ({change_pct:+.2f}%) · {change_label}' if change is not None else change_label)
+    head=(f'<div class="tc-top"><div class="tc-id"><div class="tc-identity-row"><b class="tc-symbol">{e(symbol)}</b>'
+        +f'<b class="tc-inline-price">{e(price)}</b><strong class="tc-day-change {signed_tone(change)}">{e(movement)}</strong></div>'
+        +f'<span>{e(name)}</span>'+(f'<small>{e(sector)}</small>' if sector else '')
+        +f'<small>{e(price_note)}</small></div>'+compliance_box(symbol)+'</div>')
     tone='no' if combined.startswith('NO GO') else 'go' if combined.startswith('CONDITIONAL') else ''
     head+=f'<div class="tc-verdict {tone}"><b>{e(combined)}</b><span>{e(tech["reason"])}</span></div>'
     checks=''.join(f'<span class="tc-chip {state}" title="{e(detail)}"><i>{CHIP_MARK.get(state,"·")}</i>{e(label)}</span>' for label,state,detail in extra.get('checks') or [])

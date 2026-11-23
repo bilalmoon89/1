@@ -197,6 +197,7 @@ def quote_review(quote,now):
             feed=f'{delay} min delayed'
             if status=='CURRENT':status='DELAYED'
         return {'valid':True,'price':price,'sma200':sma,'below200':price<sma,'status':status,
+            'day_change_pct':number(quote.get('change')),
             'updated':stamp.tz_convert('America/New_York').isoformat(timespec='seconds'),'feed':feed}
     except (KeyError,ValueError,TypeError,OverflowError):
         return {'valid':False,'status':'UNAVAILABLE / STALE · fresh intraday check required'}
