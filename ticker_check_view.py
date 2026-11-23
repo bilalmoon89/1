@@ -13,7 +13,7 @@ CSS='''<style>
 
 
 CSS+='''<style>
-.tc-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,260px) minmax(0,1fr);align-items:center;gap:16px;margin:2px 0 10px}
+.tc-top{display:grid;grid-template-columns:minmax(0,.75fr) minmax(210px,260px) minmax(0,1.25fr);align-items:center;gap:16px;margin:2px 0 10px}
 .tc-islamic{background:#101925;border:1px solid #2C3A4C;border-top:2px solid #75859A;border-radius:6px;padding:8px 12px;text-align:center;min-width:0}.tc-islamic>*{display:block}.tc-islamic>small{font-size:10px;color:#A9B6C6;line-height:1.5}.tc-islamic>b{font-size:16px;margin:3px 0;color:#C9D3DF}.tc-islamic>span,.tc-islamic>a{font-size:11px;line-height:1.5;color:#A9B6C6}.tc-islamic.pass{border-top-color:#45D6A0}.tc-islamic.pass>b{color:#45D6A0}.tc-islamic.warn{border-top-color:#D4A840}.tc-islamic.warn>b{color:#D4A840}.tc-islamic.fail{border-top-color:#F47F8E}.tc-islamic.fail>b{color:#F47F8E}
 .tc-id b{font:600 30px/1 var(--serif,Georgia,serif);color:#F0EDE6;letter-spacing:.01em}
 .tc-id span{display:block;margin-top:5px;font-size:13px;color:#C9D3DF}.tc-id small{display:block;margin-top:2px;font-size:11.5px;color:#A9B6C6}
@@ -33,7 +33,7 @@ CSS+='''<style>
 .tc-kpi span{display:block;margin-top:2px;font-size:11px;color:#A9B6C6}.tc-kpi.up b{color:#45D6A0}.tc-kpi.down b{color:#F47F8E}.tc-kpi.warn b{color:#E3C77E}
 .tc-values b{font-size:18px}
 .tc-plan-entry b{color:#D4A840}.tc-plan-stop b{color:#F47F8E}.tc-plan-target b{color:#45D6A0}
-@media(max-width:680px){.tc-top{grid-template-columns:1fr 1fr;gap:8px}.tc-id{grid-column:1/-1}.tc-islamic{grid-column:1;min-width:0}.tc-price{text-align:right}.tc-verdict{grid-template-columns:1fr}.tc-verdict b{white-space:normal}.tc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.tc-top{grid-template-columns:1fr 1fr;gap:8px}.tc-id{grid-column:1;grid-row:1}.tc-price{grid-column:2;grid-row:1;text-align:right}.tc-islamic{grid-column:1/-1;grid-row:2;min-width:0;text-align:left;padding:10px 12px}.tc-islamic>small,.tc-islamic>span{font-size:12px;line-height:1.55}.tc-islamic>b{font-size:18px}.tc-verdict{grid-template-columns:1fr}.tc-verdict b{white-space:normal}.tc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>'''
 
 def tag(text):
