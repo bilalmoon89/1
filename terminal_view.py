@@ -90,7 +90,7 @@ def panel(title, body, meta=''):
     return f'<section class="terminal-panel"><div class="panel-head"><b><span class="grip">⠿</span> {e(title)}</b><span>{e(meta)}</span></div><div class="panel-body">{body}</div></section>'
 
 def header(updated=None,source='Yahoo Finance',active='terminal'):
-    links=[('terminal','Terminal'),('rotation','Rotation'),('setups','VCP &amp; PEG'),('liquid','Liquid Uptrend'),('ticker','Ticker Check')]
+    links=[('terminal','Terminal'),('rotation','Rotation'),('ticker','Ticker Check'),('setups','VCP &amp; PEG'),('liquid','Liquid Uptrend')]
     nav=''.join(f'<a class="nav-chip{" active" if key==active else ""}" href="?view={key}" target="_self">{label}</a>' for key,label in links)
     return (f'<div class="terminal-header"><div class="terminal-brand">{LOGO_SVG}<div class="brand-words">'
         f'<strong>Crescent<em>BETA</em></strong><small>Trade Terminal · Market Intelligence</small></div></div>'

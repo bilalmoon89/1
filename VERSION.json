@@ -1,7 +1,7 @@
 {
   "app": "Crescent Trade Terminal — BETA",
-  "version": "7.11.0-beta",
-  "build_date": "2026-11-16",
+  "version": "7.11.1-beta",
+  "build_date": "2026-11-23",
   "deployment": "standalone-new-streamlit-app",
   "writes_to_existing_scanner": false,
   "offline_tests_passed": "108 of 110 non-UI tests (Python 3.13, pandas 3); 2 need yfinance/streamlit and test_terminal_ui.py was not run in the build environment",

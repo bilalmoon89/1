@@ -2,6 +2,7 @@
 from terminal_view import e
 from liquid_table import leaders_table
 from ticker_check import number
+from islamic_compliance import compliance_box
 
 CSS='''<style>
 .tc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:3px 0 5px}.tc-head b{font-size:18px}.tc-head small,.tc-note{color:#98aabd;font-size:12px;line-height:1.5}.tc-decision{border:1px solid #594b31;border-left:3px solid #B8922A;background:#1B1810;border-radius:5px;padding:7px 10px;display:flex;gap:14px;align-items:center;margin-bottom:9px}.tc-decision b{font-size:14px;white-space:nowrap;color:#D4A840}.tc-decision span{font-size:12px;color:#b1bdcb}.tc-decision.no{border-left-color:#e77987;background:#251b24}.tc-decision.no b{color:#ef8b98}
@@ -12,7 +13,8 @@ CSS='''<style>
 
 
 CSS+='''<style>
-.tc-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:2px 0 10px}
+.tc-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,260px) minmax(0,1fr);align-items:center;gap:16px;margin:2px 0 10px}
+.tc-islamic{background:#101925;border:1px solid #2C3A4C;border-top:2px solid #75859A;border-radius:6px;padding:8px 12px;text-align:center;min-width:0}.tc-islamic>*{display:block}.tc-islamic>small{font-size:10px;color:#A9B6C6;line-height:1.5}.tc-islamic>b{font-size:16px;margin:3px 0;color:#C9D3DF}.tc-islamic>span,.tc-islamic>a{font-size:11px;line-height:1.5;color:#A9B6C6}.tc-islamic.pass{border-top-color:#45D6A0}.tc-islamic.pass>b{color:#45D6A0}.tc-islamic.warn{border-top-color:#D4A840}.tc-islamic.warn>b{color:#D4A840}.tc-islamic.fail{border-top-color:#F47F8E}.tc-islamic.fail>b{color:#F47F8E}
 .tc-id b{font:600 30px/1 var(--serif,Georgia,serif);color:#F0EDE6;letter-spacing:.01em}
 .tc-id span{display:block;margin-top:5px;font-size:13px;color:#C9D3DF}.tc-id small{display:block;margin-top:2px;font-size:11.5px;color:#A9B6C6}
 .tc-price{text-align:right}.tc-price b{display:block;font:600 26px/1 var(--mono,monospace);color:#F0EDE6;font-variant-numeric:tabular-nums}
@@ -31,7 +33,7 @@ CSS+='''<style>
 .tc-kpi span{display:block;margin-top:2px;font-size:11px;color:#A9B6C6}.tc-kpi.up b{color:#45D6A0}.tc-kpi.down b{color:#F47F8E}.tc-kpi.warn b{color:#E3C77E}
 .tc-values b{font-size:18px}
 .tc-plan-entry b{color:#D4A840}.tc-plan-stop b{color:#F47F8E}.tc-plan-target b{color:#45D6A0}
-@media(max-width:680px){.tc-top{flex-direction:column;align-items:flex-start;gap:8px}.tc-price{text-align:left}.tc-verdict{grid-template-columns:1fr}.tc-verdict b{white-space:normal}.tc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.tc-top{grid-template-columns:1fr 1fr;gap:8px}.tc-id{grid-column:1/-1}.tc-islamic{grid-column:1;min-width:0}.tc-price{text-align:right}.tc-verdict{grid-template-columns:1fr}.tc-verdict b{white-space:normal}.tc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>'''
 
 def tag(text):
@@ -85,7 +87,7 @@ def dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations,r40
         price=f'{tech["price"]:,.2f}' if number(tech.get('price')) is not None else '—'
         price_note=f'Daily close {tech.get("asof","unavailable")} · live quote {str(quote.get("status","unavailable")).split(" · ")[0].lower()}'
     head=(f'<div class="tc-top"><div class="tc-id"><b>{e(symbol)}</b><span>{e(name)}</span>'+(f'<small>{e(sector)}</small>' if sector else '')
-        +f'</div><div class="tc-price"><b>{e(price)}</b><small>{e(price_note)}</small></div></div>')
+        +'</div>'+compliance_box(symbol)+f'<div class="tc-price"><b>{e(price)}</b><small>{e(price_note)}</small></div></div>')
     tone='no' if combined.startswith('NO GO') else 'go' if combined.startswith('CONDITIONAL') else ''
     head+=f'<div class="tc-verdict {tone}"><b>{e(combined)}</b><span>{e(tech["reason"])}</span></div>'
     checks=''.join(f'<span class="tc-chip {state}" title="{e(detail)}"><i>{CHIP_MARK.get(state,"·")}</i>{e(label)}</span>' for label,state,detail in extra.get('checks') or [])
