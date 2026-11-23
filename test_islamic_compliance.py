@@ -11,6 +11,9 @@ def test_snapshot_has_250_verified_rows_and_requested_labels():
         html = compliance_box(symbol, date(2026,11,23), data)
         assert f'<b>{expected}</b>' in html
         assert 'Reference:' in html
+        assert 'For information and idea generation only.' in html
+        assert 'Verify current compliance before acting.' in html
+        assert 'Data provided by Zoya' not in html
 
 
 def test_rating_expires_at_15_days_and_future_snapshot_is_not_used():

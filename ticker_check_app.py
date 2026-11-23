@@ -99,6 +99,7 @@ def main():
     extra={'context':context,'setups':setups,'earnings':earnings,'plan_source':plan_source,
         'checks':checklist(tech,fund_state,setups,context,earnings.get('days'))}
     st.markdown(dashboard(symbol,data,quarters,fund_state,tech,quote,combined,valuations,r40,extra),unsafe_allow_html=True)
+    st.caption('Compliance source: [Data provided by Zoya](https://zoya.finance/api). Saved AAOIFI screening is for information and idea generation only; verify current compliance independently before acting. Not investment advice or a ruling on a trading strategy.')
     if usable:
         try:
             from crescent_charts import candles

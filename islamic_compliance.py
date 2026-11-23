@@ -39,4 +39,4 @@ def compliance_box(symbol, today=None, snapshot=None):
             '<small>ISLAMIC COMPLIANCE · AAOIFI</small>'
             f'<b>{e(label)}</b><span>Reference: {e(reference)}</span>'
             f'<small title="Saved stock screening; not an options-strategy ruling">{e(note)}</small>'
-            '<a href="https://zoya.finance" target="_blank" rel="noopener noreferrer">Data provided by Zoya</a></aside>')
+            '<small>For information and idea generation only. Verify current compliance before acting.</small></aside>')
