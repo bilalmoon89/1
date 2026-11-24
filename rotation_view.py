@@ -12,6 +12,18 @@ BATCH=24
 BENCHMARKS=('SPY','QQQ','IWM')
 
 
+@st.cache_data(ttl=60,show_spinner=False)
+def _rotation_quotes(symbols):
+    from liquid_data import fetch_session_quotes
+    return fetch_session_quotes(symbols)
+
+
+@st.cache_data(ttl=60,show_spinner=False)
+def _rotation_etf_bars(symbols):
+    from intraday_context import fetch_intraday
+    return fetch_intraday(symbols)[0]
+
+
 def _setup_labels(history,symbols):
     """TIGHT · 8 EMA / EXTENDED for the members of one theme (same rule as Liquid Uptrend)."""
     from liquid_uptrend import _strength
@@ -25,13 +37,13 @@ def _setup_labels(history,symbols):
 
 def render_rotation_page(daily_loader,now):
     st.markdown(CSS,unsafe_allow_html=True)
-    st.markdown('<div class="section-heading">Theme Rotation <span>Where money is moving · completed daily candles · equal-weight baskets</span></div>',unsafe_allow_html=True)
+    st.markdown('<div class="section-heading">Theme Rotation <span>Intraday during the regular session · completed daily candles after close</span></div>',unsafe_allow_html=True)
     from datetime import datetime
     import scan_store
     from session_validity import completed_session
     expected=str(completed_session(datetime.now(now.tzinfo)))
     one,two,three,four=st.columns([2.4,1.2,1,1],vertical_alignment='bottom')
-    period=one.radio('Period',list(PERIODS),index=2,horizontal=True,key='rot_period')
+    period=one.radio('Period',list(PERIODS),index=0,horizontal=True,key='rot_period')
     view=two.radio('View',['Cards','Table'],horizontal=True,key='rot_view')
     benchmark=three.selectbox('Compare against',BENCHMARKS,key='rot_benchmark')
     with st.expander('Market groups · how to read this',expanded=False):
@@ -51,13 +63,16 @@ def render_rotation_page(daily_loader,now):
         st.session_state.rotation_job=job={'symbols':every,'done':0,'history':{},'failures':{},'active':True}
         st.session_state.pop('rotation_result',None)
     polling=bool(job and job.get('active'))
-    st.fragment(run_every='2s' if polling else None)(_results)(daily_loader,now,selected,catalog,PERIODS[period],view,benchmark,expected)
+    st.fragment(run_every='2s' if polling else '60s')(_results)(daily_loader,now,selected,catalog,PERIODS[period],view,benchmark,expected)
 
 
 def _results(daily_loader,now,selected,catalog,horizon,view,benchmark,expected=''):
     import scan_store
     from datetime import datetime
     now=datetime.now(now.tzinfo)
+    from session_validity import completed_session, session_clock
+    expected=str(completed_session(now))
+    clock=session_clock(now)
     job=st.session_state.get('rotation_job')
     if not job:
         st.info(f'{len(selected)} themes ready. Select Load rotation: about 550 price histories load in a minute or two, once per trading day. After that the page opens with the result already loaded.');return
@@ -75,6 +90,11 @@ def _results(daily_loader,now,selected,catalog,horizon,view,benchmark,expected='
             job['active']=False;scan_store.save('rotation',job,expected,now);st.rerun()
         st.progress(job['done']/max(1,len(job['symbols'])),text=f"{job['done']} / {len(job['symbols'])} loaded");return
     history=job['history']
+    # Refresh daily baselines once after a newly completed close becomes available.
+    if job.get('requested_session') != expected and scan_store.data_through(history) < expected:
+        job.update(done=0, history={}, failures={}, active=True, requested_session=expected)
+        st.session_state.pop('rotation_result',None)
+        st.rerun()
     if benchmark not in history:
         st.error(f'{benchmark} history is unavailable, so relative strength cannot be measured. Load rotation again.');return
     # Metrics are computed once per load and benchmark, not on every rerun.
@@ -84,6 +104,30 @@ def _results(daily_loader,now,selected,catalog,horizon,view,benchmark,expected='
         stocks,asof=stock_metrics(history,benchmark)
         st.session_state.rotation_result=cached=(key,stocks,asof)
     _,stocks,asof=cached
+    intraday=clock['open']
+    if intraday:
+        try:
+            from rotation_intraday import intraday_metrics
+            quotes=_rotation_quotes(tuple(job['symbols']))
+            # The public stock screener omits ETFs. Align Yahoo ETF candles to
+            # the stock feed's timestamp instead of mixing newer benchmark prices.
+            missing=tuple(s for s in set(BENCHMARKS)|set(SECTOR_PROXIES.values()) if s not in quotes)
+            if missing:
+                from intraday_context import session_rows
+                stamps=[float(q['last_bar_update_time']) for q in quotes.values() if q.get('last_bar_update_time')]
+                anchor=pd.Timestamp(pd.Series(stamps).median(),unit='s',tz='UTC') if stamps else pd.Timestamp(now)
+                frames=_rotation_etf_bars(tuple(sorted(missing)))
+                frames={s:f[f.index+pd.Timedelta(minutes=5)<=anchor] for s,f in frames.items()}
+                context=session_rows(frames,history,now)
+                for row in context['rows'].to_dict('records'):
+                    stamp=pd.Timestamp(row['Bar close'])
+                    quotes[row['Symbol']]={'close':row['Last'],'change':row['Today %'],
+                        'time':stamp.timestamp(),'last_bar_update_time':stamp.timestamp()}
+            stocks,asof=intraday_metrics(history,quotes,benchmark,now)
+        except Exception as exc:
+            st.warning(f'Intraday rotation unavailable ({type(exc).__name__}). Retrying in 60 seconds; daily returns are not substituted.');return
+        if stocks.empty or asof is None:
+            st.warning('Intraday rotation unavailable: current benchmark quotes or session-aligned daily baselines are missing. Retrying every 60 seconds; yesterday is not shown as today.');return
     if stocks.empty or asof is None:
         st.error('Not enough benchmark history to rank themes.');return
     themes=theme_metrics(stocks,selected)
@@ -91,7 +135,12 @@ def _results(daily_loader,now,selected,catalog,horizon,view,benchmark,expected='
     counts=themes[themes['Rank eligible']].State.value_counts()
     summary=' · '.join(f'{name} <b>{int(counts.get(name,0))}</b>' for name in ('Leading','Leading + heating','Heating','Cooling','Lagging','Mixed') if counts.get(name,0))
     loaded=str(job.get('loaded_at',''))[11:16]
-    html=f'<div class="rot-status">Session <b>{asof.date()}</b>'+(f' · loaded {loaded} ET' if loaded else '')+f' · <b>{ranked}</b> of {len(themes)} themes ranked · vs <b>{e(benchmark)}</b> · {summary}</div>'
+    mode=(f'INTRADAY · delayed TradingView stocks + aligned Yahoo ETF bars · quote {asof.strftime("%H:%M:%S")} ET · refresh 60s' if intraday else 'COMPLETED DAILY CANDLES')
+    html=f'<div class="rot-status">{mode} · Session <b>{asof.date()}</b>'+(f' · daily baseline loaded {loaded} ET' if loaded else '')+f' · <b>{ranked}</b> of {len(themes)} themes ranked · vs <b>{e(benchmark)}</b> · {summary}</div>'
+    if not intraday and clock['now'] >= clock['close'] and str(asof.date()) < str(clock['date']):
+        st.info(f'Regular session closed. Today’s completed daily candles are pending from Yahoo; the dated prior session remains visible. Daily reload is requested after the 15-minute provider buffer.')
+    if intraday:
+        st.caption('Today = current regular-session change versus previous close. Longer periods include the active session. EMA, volume/liquidity and setup context use completed daily history. Partial, stale or unsynchronized members are excluded. Intraday data is not an extended-hours feed.')
     if expected and str(asof.date())<expected:
         st.warning(f"Yahoo's daily data ends {asof.date()}; the latest completed session is {expected}. These results are one session behind. Select Refresh later to pick up the new candles.")
     ok=stocks[stocks.Data.eq('OK')].set_index('Symbol')
