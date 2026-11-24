@@ -12,13 +12,13 @@ BATCH=24
 BENCHMARKS=('SPY','QQQ','IWM')
 
 
-@st.cache_data(ttl=60,show_spinner=False)
+@st.cache_data(ttl=900,show_spinner=False)
 def _rotation_quotes(symbols):
     from liquid_data import fetch_session_quotes
     return fetch_session_quotes(symbols)
 
 
-@st.cache_data(ttl=60,show_spinner=False)
+@st.cache_data(ttl=900,show_spinner=False)
 def _rotation_etf_bars(symbols):
     from intraday_context import fetch_intraday
     return fetch_intraday(symbols)[0]
@@ -63,7 +63,7 @@ def render_rotation_page(daily_loader,now):
         st.session_state.rotation_job=job={'symbols':every,'done':0,'history':{},'failures':{},'active':True}
         st.session_state.pop('rotation_result',None)
     polling=bool(job and job.get('active'))
-    st.fragment(run_every='2s' if polling else '60s')(_results)(daily_loader,now,selected,catalog,PERIODS[period],view,benchmark,expected)
+    st.fragment(run_every='2s' if polling else '15m')(_results)(daily_loader,now,selected,catalog,PERIODS[period],view,benchmark,expected)
 
 
 def _results(daily_loader,now,selected,catalog,horizon,view,benchmark,expected=''):
@@ -125,9 +125,9 @@ def _results(daily_loader,now,selected,catalog,horizon,view,benchmark,expected='
                         'time':stamp.timestamp(),'last_bar_update_time':stamp.timestamp()}
             stocks,asof=intraday_metrics(history,quotes,benchmark,now)
         except Exception as exc:
-            st.warning(f'Intraday rotation unavailable ({type(exc).__name__}). Retrying in 60 seconds; daily returns are not substituted.');return
+            st.warning(f'Intraday rotation unavailable ({type(exc).__name__}). Retrying in 15 minutes; daily returns are not substituted.');return
         if stocks.empty or asof is None:
-            st.warning('Intraday rotation unavailable: current benchmark quotes or session-aligned daily baselines are missing. Retrying every 60 seconds; yesterday is not shown as today.');return
+            st.warning('Intraday rotation unavailable: current benchmark quotes or session-aligned daily baselines are missing. Retrying every 15 minutes; yesterday is not shown as today.');return
     if stocks.empty or asof is None:
         st.error('Not enough benchmark history to rank themes.');return
     themes=theme_metrics(stocks,selected)
@@ -135,7 +135,7 @@ def _results(daily_loader,now,selected,catalog,horizon,view,benchmark,expected='
     counts=themes[themes['Rank eligible']].State.value_counts()
     summary=' · '.join(f'{name} <b>{int(counts.get(name,0))}</b>' for name in ('Leading','Leading + heating','Heating','Cooling','Lagging','Mixed') if counts.get(name,0))
     loaded=str(job.get('loaded_at',''))[11:16]
-    mode=(f'INTRADAY · delayed TradingView stocks + aligned Yahoo ETF bars · quote {asof.strftime("%H:%M:%S")} ET · refresh 60s' if intraday else 'COMPLETED DAILY CANDLES')
+    mode=(f'INTRADAY · delayed TradingView stocks + aligned Yahoo ETF bars · quote {asof.strftime("%H:%M:%S")} ET · refresh 15 min' if intraday else 'COMPLETED DAILY CANDLES')
     html=f'<div class="rot-status">{mode} · Session <b>{asof.date()}</b>'+(f' · daily baseline loaded {loaded} ET' if loaded else '')+f' · <b>{ranked}</b> of {len(themes)} themes ranked · vs <b>{e(benchmark)}</b> · {summary}</div>'
     if not intraday and clock['now'] >= clock['close'] and str(asof.date()) < str(clock['date']):
         st.info(f'Regular session closed. Today’s completed daily candles are pending from Yahoo; the dated prior session remains visible. Daily reload is requested after the 15-minute provider buffer.')

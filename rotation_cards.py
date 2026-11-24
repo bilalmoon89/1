@@ -6,7 +6,7 @@ import pandas as pd
 PERIODS={'Today':1,'2 days':2,'1 week':5,'1 month':21}
 PANELS=(('Leading','Sustained strength',('Leading','Leading + heating'),'#D4A840'),
     ('Heating','New money in the last two sessions',('Heating',),'#45D6A0'),
-    ('Cooling','Leaders losing pace',('Cooling',),'#F47F8E'))
+    ('Cooling','Leaders losing pace',('Cooling',),'#B7A5EF'))
 
 CSS='''<style>
 .rot-status{font-size:12px;color:#A9B6C6;margin:0 0 6px}.rot-status b{color:#E1E8F0;font-weight:600}
@@ -21,7 +21,7 @@ CSS='''<style>
 .rot-card{border:1px solid #2C3A4C;border-left:3px solid var(--tone);border-radius:5px;background:var(--fill);padding:5px 9px;margin:0 0 4px}
 .rot-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .rot-top b{font:600 12.5px var(--sans,sans-serif);color:#F0EDE6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rot-top strong{font:600 13.5px var(--mono,monospace);color:var(--tone);white-space:nowrap}
+.rot-top strong{font:600 13.5px var(--mono,monospace);color:var(--move,var(--tone));white-space:nowrap}
 .rot-card small{display:block;margin-top:1px;font-size:11px;line-height:1.35;color:#C9D3DF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rot-card small i{font-style:normal;font-family:var(--mono,monospace);color:#F0EDE6}
 .rot-empty{border:1px dashed #2C3A4C;border-radius:5px;padding:6px 9px;font-size:11.5px;color:#A9B6C6}
@@ -46,6 +46,10 @@ def signed(value,unit='%'):
 def theme_card(row,horizon,leaders=''):
     value=row.get(f'{horizon}D %',np.nan)
     tone='#45D6A0' if pd.notna(value) and value>.05 else '#F47F8E' if pd.notna(value) and value<-.05 else '#C5CEDA'
+    state=str(row.get('State',''))
+    accent,fill=(('#D4A840','#252116') if state.startswith('Leading') else
+                 ('#45D6A0','#102B27') if state=='Heating' else
+                 ('#B7A5EF','#231F35') if state=='Cooling' else (tone,heat(value)))
     rs=row.get(f'RS {horizon}D pp',np.nan);breadth=row.get(f'Breadth {horizon}D %',np.nan)
     parts=['RS '+('—' if pd.isna(rs) else f'{rs:+.1f} pp')]
     if pd.notna(breadth):parts.append(f'{breadth:.0f}% rising')
@@ -53,7 +57,7 @@ def theme_card(row,horizon,leaders=''):
     lift=row.get('Rank lift 10D → 2D',np.nan)
     if pd.notna(lift) and abs(lift)>=5:parts.append(f"rank {'↑' if lift>0 else '↓'}{abs(int(lift))}")
     title=f"{row.get('State','')} · {int(row.get('Valid',0))} of {int(row.get('Members',0))} members covered"
-    return (f'<article class="rot-card" title="{escape(title)}" style="--fill:{heat(value)};--tone:{tone}"><div class="rot-top"><b>{escape(str(row.get("Theme","")))}</b>'
+    return (f'<article class="rot-card" title="{escape(title)}" style="--fill:{fill};--tone:{accent};--move:{tone}"><div class="rot-top"><b>{escape(str(row.get("Theme","")))}</b>'
         f'<strong>{signed(value)}</strong></div><small>{escape(" · ".join(parts))}'
         +(f' · <i>{escape(leaders)}</i>' if leaders else '')+'</small></article>')
 
