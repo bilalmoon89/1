@@ -4,9 +4,9 @@ from islamic_compliance import compliance_box, SNAPSHOT
 from terminal_view import header
 
 
-def test_snapshot_has_250_verified_rows_and_requested_labels():
+def test_snapshot_has_verified_rows_and_requested_labels():
     data = json.loads(SNAPSHOT.read_text())
-    assert len(data['stocks']) == 250
+    assert len(data['stocks']) >= 250
     for symbol, expected in [('AAPL', 'Compliant'), ('MSFT', 'Questionable'), ('ANF', 'Non Compliant'), ('NOTFOUND', 'No Data'), ('SPY','No Data')]:
         html = compliance_box(symbol, date(2026,11,23), data)
         assert f'<b>{expected}</b>' in html
@@ -33,3 +33,12 @@ def test_unknown_status_not_assumed_compliant_and_dates_escaped():
 def test_navigation_places_ticker_immediately_after_rotation():
     html = header()
     assert html.index('view=rotation') < html.index('view=ticker') < html.index('view=setups')
+
+
+def test_each_stock_keeps_its_own_check_date():
+    data={'methodology':'AAOIFI','checked_on':'2026-11-23', 'stocks':{
+        'OLD':{'status':'Compliant','report_date':'2026-11-01'},
+        'NEW':{'status':'Compliant','report_date':'2026-11-24','checked_on':'2026-11-25'}}}
+    assert '<b>No Data</b>' in compliance_box('OLD',date(2026,12,8),data)
+    html=compliance_box('NEW',date(2026,12,8),data)
+    assert '<b>Compliant</b>' in html and 'refresh by 2026-12-10' in html

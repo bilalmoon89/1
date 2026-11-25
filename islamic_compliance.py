@@ -22,7 +22,7 @@ def compliance_box(symbol, today=None, snapshot=None):
     reference = row.get('report_date', '—')
     note = 'No saved report for this listing.'
     try:
-        checked = date.fromisoformat(snapshot['checked_on'])
+        checked = date.fromisoformat(row.get('checked_on') or snapshot['checked_on'])
         report = date.fromisoformat(row['report_date'])
         due = checked + timedelta(days=15)
         if checked <= today < due and report <= checked and snapshot.get('methodology') == 'AAOIFI':
