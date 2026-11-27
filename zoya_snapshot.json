@@ -2502,6 +2502,1256 @@
       "status": "NonCompliant",
       "report_date": "2026-11-02",
       "checked_on": "2026-11-25"
+    },
+    "LYB": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "BG": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "MTSI": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "PR": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "WMG": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-21",
+      "checked_on": "2026-11-27"
+    },
+    "ESS": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "ASND": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "H": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "PFGC": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "RDDT": {
+      "status": "Questionable",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "BEN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "AS": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "SOFI": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "EWBC": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "RVTY": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "FTAI": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "YUMC": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "KIM": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "HST": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "CF": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "CW": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "PAA": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "BALL": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "WES": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "IEX": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "GPC": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-22",
+      "checked_on": "2026-11-27"
+    },
+    "RIVN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "SWK": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "SMCI": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "MAS": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "CRL": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "TYL": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "JHX": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "OVV": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "EXEL": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "JLL": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "LSCC": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "HAS": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "CHRW": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "ALLE": {
+      "status": "Compliant",
+      "report_date": "2026-10-25",
+      "checked_on": "2026-11-27"
+    },
+    "TLN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "NBIX": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "NTNX": {
+      "status": "Compliant",
+      "report_date": "2026-10-17",
+      "checked_on": "2026-11-27"
+    },
+    "FSLR": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "EG": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "LAMR": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "AIZ": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "IP": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "CLH": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "BBIO": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "RBC": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "FICO": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "INVH": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "ZBRA": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "DINO": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "ULS": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "WPC": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "CRBG": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "LDOS": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "JAZZ": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "CSL": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "BURL": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "ARMK": {
+      "status": "NonCompliant",
+      "report_date": "2026-08-25",
+      "checked_on": "2026-11-27"
+    },
+    "WCC": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "APA": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "GKOS": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "ICLR": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "NVR": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "TRU": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "OWL": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "VNOM": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "SOLV": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "PNFP": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "DOCU": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "MANH": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "LECO": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "NWS": {
+      "status": "Questionable",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "WY": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "EQH": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "SJM": {
+      "status": "NonCompliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "MAIR": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "MKSI": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "PAG": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "SGI": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "AVY": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "OHI": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "CNH": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "CRS": {
+      "status": "Compliant",
+      "report_date": "2026-10-25",
+      "checked_on": "2026-11-27"
+    },
+    "RNR": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "DOC": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "TXT": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "FIS": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "SUI": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "AHR": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "CART": {
+      "status": "Questionable",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "ARCC": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "BAX": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "COKE": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "PS": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "BF.A": {
+      "status": "NonCompliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "CRCL": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "GME": {
+      "status": "NonCompliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "REG": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "FROG": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "CG": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "NLY": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "W": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "RPM": {
+      "status": "Compliant",
+      "report_date": "2026-10-07",
+      "checked_on": "2026-11-27"
+    },
+    "TOL": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "KYMR": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "DT": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "EHC": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "WSE": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "ELAN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "CACI": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-25",
+      "checked_on": "2026-11-27"
+    },
+    "AFG": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "MAA": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "SITM": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "CNA": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "BTSG": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "AKAM": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "CCK": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "CPT": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "MTZ": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "TIGO": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "BJ": {
+      "status": "Questionable",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "MKC": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-03",
+      "checked_on": "2026-11-27"
+    },
+    "SUN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "WTRG": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "BSY": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "PEN": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "HRL": {
+      "status": "NonCompliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "SAIL": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "CLX": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "JBS": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "ERIE": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "IVZ": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "GDDY": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "CR": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "PNW": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "WSO": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "SEIC": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "GNRC": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "TRMB": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "UNM": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "LULU": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "CSGP": {
+      "status": "Questionable",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "DKS": {
+      "status": "NonCompliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "BMRN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "WTS": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "CHYM": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "JKHY": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "FIVE": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "ELS": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "FN": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "RYAN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "CDE": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "TXRH": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "FLUT": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "GL": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "FNF": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "DTM": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "LII": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "GRAB": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "QXO": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "DPZ": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-14",
+      "checked_on": "2026-11-27"
+    },
+    "GWRE": {
+      "status": "Questionable",
+      "report_date": "2026-10-17",
+      "checked_on": "2026-11-27"
+    },
+    "GGG": {
+      "status": "Compliant",
+      "report_date": "2026-10-23",
+      "checked_on": "2026-11-27"
+    },
+    "TECH": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "AMH": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "ALLY": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "HII": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "RRC": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "COO": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "ALGN": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "UDR": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "MLI": {
+      "status": "Compliant",
+      "report_date": "2026-10-23",
+      "checked_on": "2026-11-27"
+    },
+    "GSAT": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "IT": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "PNR": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "MOG.A": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-23",
+      "checked_on": "2026-11-27"
+    },
+    "FDS": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "GLPI": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "EVR": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "RRX": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "PCOR": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "PAYC": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "RGEN": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "NXT": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "R": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-25",
+      "checked_on": "2026-11-27"
+    },
+    "NYT": {
+      "status": "Questionable",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "AR": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "DECK": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "EQX": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "HALO": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "AES": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "BWXT": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "LTH": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "OGE": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "SIRI": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "AIT": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "NTSK": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "TEM": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "AVTR": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "EGP": {
+      "status": "Compliant",
+      "report_date": "2026-10-23",
+      "checked_on": "2026-11-27"
+    },
+    "FLS": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "UHS": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "FHN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "ONON": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "ENSG": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "SF": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "FRO": {
+      "status": "Compliant",
+      "report_date": "2026-11-21",
+      "checked_on": "2026-11-27"
+    },
+    "ACM": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-21",
+      "checked_on": "2026-11-27"
+    },
+    "QGEN": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "IONQ": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "SOLS": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "BWA": {
+      "status": "Compliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "ASTS": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "MOH": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-23",
+      "checked_on": "2026-11-27"
+    },
+    "KNX": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "BIO": {
+      "status": "Compliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "AGNC": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "WTFC": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "ALSN": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "DVA": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "CUBE": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "JAN": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "INIO": {
+      "status": "Compliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "TTC": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "LFUS": {
+      "status": "Compliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "BXP": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "ALB": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "UMBF": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-29",
+      "checked_on": "2026-11-27"
+    },
+    "SSB": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "TGTX": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "SMTC": {
+      "status": "Compliant",
+      "report_date": "2026-09-15",
+      "checked_on": "2026-11-27"
+    },
+    "DCI": {
+      "status": "Compliant",
+      "report_date": "2026-10-17",
+      "checked_on": "2026-11-27"
+    },
+    "BAH": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-25",
+      "checked_on": "2026-11-27"
+    },
+    "AYI": {
+      "status": "Compliant",
+      "report_date": "2026-11-19",
+      "checked_on": "2026-11-27"
+    },
+    "LLYVA": {
+      "status": "Questionable",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "PINS": {
+      "status": "Questionable",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "HUBS": {
+      "status": "Compliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "ORI": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "FRT": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-02",
+      "checked_on": "2026-11-27"
+    },
+    "CTRE": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-07",
+      "checked_on": "2026-11-27"
+    },
+    "KRYS": {
+      "status": "NonCompliant",
+      "report_date": "2026-11-06",
+      "checked_on": "2026-11-27"
+    },
+    "SCI": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "TTEK": {
+      "status": "Compliant",
+      "report_date": "2026-11-21",
+      "checked_on": "2026-11-27"
+    },
+    "AM": {
+      "status": "NonCompliant",
+      "report_date": "2026-10-30",
+      "checked_on": "2026-11-27"
+    },
+    "ONTO": {
+      "status": "Compliant",
+      "report_date": "2026-02-27",
+      "checked_on": "2026-11-27"
     }
   }
 }
